@@ -1,21 +1,15 @@
 .section ".boot"
-.intel_syntax noprefix
-
-#define MULTIBOOT2_MAGIC        0xe85250d6
-#define MULTIBOOT2_ARCH_I386    0
-#define INFOREQ_TYPE            1
-#define INFOREQ_FLAGS           0
 
 .align 8
-multiboot2_header:
-    .long   MULTIBOOT2_MAGIC                            # マジックナンバー
-    .long   MULTIBOOT2_ARCH_I386                        # アーキテクチャ(i386)
-    .long   multiboot2_header_end - multiboot2_header   # multibootヘッダの長さ
-    .long   -(MULTIBOOT2_MAGIC + MULTIBOOT2_ARCH_I386 + (multiboot2_header_end - multiboot2_header))    # チェックサム
+multiboot2_header_start:
+    .long   0xe85250d6                            # マジックナンバー
+    .long   0                        # アーキテクチャ(i386)
+    .long   multiboot2_header_end - multiboot2_header_start   # multibootヘッダの長さ
+    .long   -(0xe85250d6 + 0 + (multiboot2_header_end - multiboot2_header_start))    # チェックサム
 
 multiboot2_inforeq:
-    .short  INFOREQ_TYPE
-    .short  INFOREQ_FLAGS
+    .short  1   # inforeq type
+    .short  0   # inforeq flags
     .long   multiboot2_inforeq_end - multiboot2_inforeq
     .long   6   # memory mapのリクエスト
 multiboot2_inforeq_end:
@@ -39,7 +33,8 @@ multiboot_header_end:
 .global boot
 boot:
     cli     # 割り込み禁止
-
+    mov dword ptr [0xb8000], 0x2f4b2f4f # print OK
+    hlt
     # スタック切り替え
     mov     esp, offset __kernel_stack
 
@@ -85,70 +80,71 @@ boot2:
     # カーネルのページテーブルの構築を行う
     # ここでは2MBページング
     # PML4の構築
+    mov     esi, 8
 construct_kernel_pml4:
-    lea     eax, [__kernel_pagetable_pml4]
+    lea     edx, [__kernel_pagetable_pml4]
     lea     ebx, [__kernel_pagetable_pdpt + 0b11]  # Present, Read/Write
     # PML4のエントリを1つ構築
-    mov dword ptr   [eax + 0], ebx
-    mov dword ptr   [eax + 4], 0
+    mov dword ptr   [edx + 0], ebx
+    mov dword ptr   [edx + 4], 0
     # 以下はPML4の2つ目以降のエントリを無効にしておくためにP=0を置いておく処理
     mov     ecx, 1
 construct_kernel_pml4_loop:
-    mov     edx, ecx
-    mul     edx, 8
-    add     edx, eax
-    mov dword ptr   [edx + 0], 0
-    mov dword ptr   [edx + 4], 0
+    mov     eax, ecx
+    mul     esi
+    add     eax, edx
+    mov dword ptr   [eax + 0], 0
+    mov dword ptr   [eax + 4], 0
     inc     ecx
     cmp     ecx, 512
     jne     construct_kernel_pml4_loop
 
     # PDPTの構築
 construct_kernel_pdpt:
-    lea     eax, [__kernel_pagetable_pdpt]
+    lea     edx, [__kernel_pagetable_pdpt]
     lea     ebx, [__kernel_pagetable_pd + 0b11]     # Present, Read/Write
     # PDPTのエントリを1つ構築
-    mov dword ptr   [eax + 0], ebx
-    mov dword ptr   [eax + 4], 0
+    mov dword ptr   [edx + 0], ebx
+    mov dword ptr   [edx + 4], 0
     # 以下はPDPTの2つ目以降のエントリを無効にしておくためにP=0を置いておく処理
     mov     ecx, 1
 construct_kernel_pdpt_loop:
-    mov     edx, ecx
-    mul     edx, 8
-    add     edx, eax
-    mov dword ptr   [edx + 0], 0
-    mov dword ptr   [edx + 4], 0
+    mov     eax, ecx
+    mul     esi
+    add     eax, edx
+    mov dword ptr   [eax + 0], 0
+    mov dword ptr   [eax + 4], 0
     inc     ecx
     cmp     ecx, 512
     jne     construct_kernel_pdpt_loop
 
     # PDの構築
 construct_kernel_pd:
-    lea     eax, [__kernel_pagetable_pd]
+    lea     edx, [__kernel_pagetable_pd]
     # PDのエントリの0番目(physical address: 0x000000 ~ 0x0fffff は無効にしておく)
-    mov dword ptr   [eax + 0], 0
-    mov dword ptr   [eax + 4], 0
+    mov dword ptr   [edx + 0], 0
+    mov dword ptr   [edx + 4], 0
     # 以下はPDのエントリ登録(2MiB x 63 = 126MiB)
     mov     ecx, 1
     mov     edi, 0x183      # Global, Page size, R/W, Present
 construct_kernel_pd_loop_0:
     add     edi, 0x100000
-    mov     edx, ecx
-    mul     edx, 8
-    add     edx, eax
-    mov dword ptr   [edx + 0], edi
-    mov dword ptr   [edx + 4], 0
+    mov     eax, ecx
+    mul     esi
+    add     eax, edx
+    mov dword ptr   [eax + 0], edi
+    mov dword ptr   [eax + 4], 0
     inc     ecx
     cmp     ecx, 64
     jne     construct_kernel_pd_loop_0
     # 以下はPDPTの以降のエントリを無効にしておくためにP=0を置いておく処理
     mov     ecx, 1
 construct_kernel_pd_loop_1:
-    mov     edx, ecx
-    mul     edx, 8
-    add     edx, eax
-    mov dword ptr   [edx + 0], 0
-    mov dword ptr   [edx + 4], 0
+    mov     eax, ecx
+    mul     esi
+    add     eax, edx
+    mov dword ptr   [eax + 0], 0
+    mov dword ptr   [eax + 4], 0
     inc     ecx
     cmp     ecx, 512
     jne     construct_kernel_pd_loop_1
@@ -179,5 +175,22 @@ change_to_long_mode:
     retf
 
 .code64
+.text
 start_long_mode:
-    
+    # .bssセクションをクリア
+    xor     al,al
+    lea     rdi, [__bss]
+    lea     rcx, [__bss_end]
+    sub     rcx, rdi
+    cld
+    rep stosb
+    # multibootの情報を取得
+    pop     rsi # multiboot infoのアドレス
+    pop     rdi # multibootのmagic
+
+    call    init_x86
+
+halt:
+    cli
+    hlt
+    jmp     halt

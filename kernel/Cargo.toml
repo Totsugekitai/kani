@@ -2,6 +2,7 @@
 name = "kani"
 version = "0.0.1"
 authors = ["Totsugekitai <37617413+Totsugekitai@users.noreply.github.com>"]
+edition = "2021"
 
 [[bin]]
 name = "kani"
