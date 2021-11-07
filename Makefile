@@ -27,4 +27,4 @@ iso:
 
 .PHONY: run
 run:
-> qemu-system-x86_64 -drive format=raw,file=kani.iso
+> qemu-system-x86_64 -drive format=raw,file=kani.iso -serial stdio
