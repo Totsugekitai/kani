@@ -1,9 +1,11 @@
-.section ".boot"
+.section ".boot", "ax" # このセクションフラグを付けないとisn't in a segmentと出る
+
+.code32
 
 .align 8
 multiboot2_header_start:
-    .long   0xe85250d6                            # マジックナンバー
-    .long   0                        # アーキテクチャ(i386)
+    .long   0xe85250d6                                      # マジックナンバー
+    .long   0                                               # アーキテクチャ(i386)
     .long   multiboot2_header_end - multiboot2_header_start   # multibootヘッダの長さ
     .long   -(0xe85250d6 + 0 + (multiboot2_header_end - multiboot2_header_start))    # チェックサム
 
@@ -33,8 +35,7 @@ multiboot_header_end:
 .global boot
 boot:
     cli     # 割り込み禁止
-    mov dword ptr [0xb8000], 0x2f4b2f4f # print OK
-    hlt
+
     # スタック切り替え
     mov     esp, offset __kernel_stack
 
@@ -79,75 +80,33 @@ boot2:
     # ここから64bitモード移行作業
     # カーネルのページテーブルの構築を行う
     # ここでは2MBページング
+construct_page_table:
     # PML4の構築
-    mov     esi, 8
-construct_kernel_pml4:
-    lea     edx, [__kernel_pagetable_pml4]
-    lea     ebx, [__kernel_pagetable_pdpt + 0b11]  # Present, Read/Write
-    # PML4のエントリを1つ構築
-    mov dword ptr   [edx + 0], ebx
-    mov dword ptr   [edx + 4], 0
-    # 以下はPML4の2つ目以降のエントリを無効にしておくためにP=0を置いておく処理
-    mov     ecx, 1
-construct_kernel_pml4_loop:
-    mov     eax, ecx
-    mul     esi
-    add     eax, edx
-    mov dword ptr   [eax + 0], 0
-    mov dword ptr   [eax + 4], 0
-    inc     ecx
-    cmp     ecx, 512
-    jne     construct_kernel_pml4_loop
-
+    lea edi, [__kernel_pagetable_pml4]
+    lea eax, [__kernel_pagetable_pdpt + 0x103] # Present, writable, global
+    mov dword ptr [edi], eax
+    mov dword ptr [edi + 4], 0
     # PDPTの構築
-construct_kernel_pdpt:
-    lea     edx, [__kernel_pagetable_pdpt]
-    lea     ebx, [__kernel_pagetable_pd + 0b11]     # Present, Read/Write
-    # PDPTのエントリを1つ構築
-    mov dword ptr   [edx + 0], ebx
-    mov dword ptr   [edx + 4], 0
-    # 以下はPDPTの2つ目以降のエントリを無効にしておくためにP=0を置いておく処理
-    mov     ecx, 1
-construct_kernel_pdpt_loop:
-    mov     eax, ecx
-    mul     esi
-    add     eax, edx
-    mov dword ptr   [eax + 0], 0
-    mov dword ptr   [eax + 4], 0
-    inc     ecx
-    cmp     ecx, 512
-    jne     construct_kernel_pdpt_loop
+    lea edi, [__kernel_pagetable_pdpt]
+    lea eax, [__kernel_pagetable_pd + 0x103] # Present, writable, global
+    mov ecx, 4 # PDPTエントリの数
+write_pdpt_entry:
+    mov dword ptr [edi], eax
+    mov dword ptr [edi + 4], 0
+    add eax, 0x1000
+    add edi, 8
+    loop write_pdpt_entry
+    # PD
+    lea edi, [__kernel_pagetable_pd]
+    mov eax, 0x0000183 # Present, writable, global, ページサイズを2MB
+    mov ecx, 4 * 512 # PDPTエントリ数 * PDエントリ数
 
-    # PDの構築
-construct_kernel_pd:
-    lea     edx, [__kernel_pagetable_pd]
-    # PDのエントリの0番目(physical address: 0x000000 ~ 0x0fffff は無効にしておく)
-    mov dword ptr   [edx + 0], 0
-    mov dword ptr   [edx + 4], 0
-    # 以下はPDのエントリ登録(2MiB x 63 = 126MiB)
-    mov     ecx, 1
-    mov     edi, 0x183      # Global, Page size, R/W, Present
-construct_kernel_pd_loop_0:
-    add     edi, 0x100000
-    mov     eax, ecx
-    mul     esi
-    add     eax, edx
-    mov dword ptr   [eax + 0], edi
-    mov dword ptr   [eax + 4], 0
-    inc     ecx
-    cmp     ecx, 64
-    jne     construct_kernel_pd_loop_0
-    # 以下はPDPTの以降のエントリを無効にしておくためにP=0を置いておく処理
-    mov     ecx, 1
-construct_kernel_pd_loop_1:
-    mov     eax, ecx
-    mul     esi
-    add     eax, edx
-    mov dword ptr   [eax + 0], 0
-    mov dword ptr   [eax + 4], 0
-    inc     ecx
-    cmp     ecx, 512
-    jne     construct_kernel_pd_loop_1
+write_pd_entry:
+    mov dword ptr [edi], eax
+    mov dword ptr [edi + 4], 0
+    add eax, 0x200000 # 2MB
+    add edi, 8
+    loop write_pd_entry
 
     # 64bitモードに移行
 change_to_long_mode:
@@ -188,7 +147,8 @@ start_long_mode:
     pop     rsi # multiboot infoのアドレス
     pop     rdi # multibootのmagic
 
-    call    init_x86
+    lea     rax, [init_x86]
+    call    rax
 
 halt:
     cli

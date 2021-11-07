@@ -1,7 +1,7 @@
 OUTPUT_FORMAT("elf64-x86-64");
 ENTRY(boot);
 
-KERNEL_BASE = 0x100000 + SIZEOF_HEADERS;
+KERNEL_BASE = 0x100000;
 
 SECTIONS {
     . = KERNEL_BASE;
@@ -11,7 +11,7 @@ SECTIONS {
         KEEP(*(.boot));
     }
 
-    /* . = KERNEL_BASE + SIZEOF(.boot); */
+    . = KERNEL_BASE + SIZEOF(.boot);
 
     .text : {
         *(.text);
@@ -60,7 +60,7 @@ SECTIONS {
         /* The initial stack for BSP. We need reserve a large space since Rust
            tend to consume too much memory especially in the debug buid :/  */
         . += 0x10000;
-        __boot_stack = .; /* physical address */
+        __kernel_stack = .; /* physical address */
 
         . = ALIGN(4096);
         __kernel_image_end = .; /* physical address */
