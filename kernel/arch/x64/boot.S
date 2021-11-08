@@ -35,7 +35,6 @@ multiboot_header_end:
 .global boot
 boot:
     cli     # 割り込み禁止
-
     # スタック切り替え
     mov     esp, offset __kernel_stack
 
@@ -52,20 +51,6 @@ boot:
     push    eax             # 次のジャンプ先をスタックに積む
     lgdt    [load_gdt]      # GDTをロード
     retf
-
-.align 16
-.global load_gdt
-load_gdt:
-    .word   gdt_end - gdt - 1
-    .long   gdt
-
-.align 16
-gdt:
-    .quad   0x0000000000000000  # 先頭はnull descriptor
-    .quad   0x00af9a000000ffff  # kernel 64bit code segment
-    .quad   0x00cf92000000ffff  # kernel 64bit data segment
-    .quad   0x00cf9a000000ffff  # kernel 32bit code segment
-gdt_end:
 
 .global boot2
 boot2:
@@ -86,6 +71,7 @@ construct_page_table:
     lea eax, [__kernel_pagetable_pdpt + 0x103] # Present, writable, global
     mov dword ptr [edi], eax
     mov dword ptr [edi + 4], 0
+
     # PDPTの構築
     lea edi, [__kernel_pagetable_pdpt]
     lea eax, [__kernel_pagetable_pd + 0x103] # Present, writable, global
@@ -100,7 +86,6 @@ write_pdpt_entry:
     lea edi, [__kernel_pagetable_pd]
     mov eax, 0x0000183 # Present, writable, global, ページサイズを2MB
     mov ecx, 4 * 512 # PDPTエントリ数 * PDエントリ数
-
 write_pd_entry:
     mov dword ptr [edi], eax
     mov dword ptr [edi + 4], 0
@@ -110,9 +95,13 @@ write_pd_entry:
 
     # 64bitモードに移行
 change_to_long_mode:
+    # 一旦 CR0.PG = 0 にする
+    mov     eax, cr0
+    and     eax, 0x7fffffff
+    mov     cr0, eax
     # PAEとPGEを1にセット
     mov     eax, cr4
-    or      eax, 0xa0
+    or      eax, 1 << 5
     mov     cr4, eax
     # ページテーブルをセット
     lea     eax, [__kernel_pagetable_pml4]
@@ -120,22 +109,42 @@ change_to_long_mode:
     # 64bitモードをon
     mov     ecx, 0xc0000080
     rdmsr
-    or      eax, 0x100
+    or      eax, 1 << 8
     wrmsr
     # retfでCSを変えて飛ぶための準備
     mov     eax, 8                  # CSの構築(GDT1番)
     push    eax
     lea     eax, [start_long_mode]  # 飛び先の準備
     push    eax
-    # ページングをon
+    # ページングをon (CR0.PG = 1, CR0.PE = 1)
     mov     eax, cr0
-    or      eax, 0x80000000
+    or      eax, 1 << 31
     mov     cr0, eax
     retf
+
+.align 16
+.global load_gdt
+load_gdt:
+    .word   gdt_end - gdt - 1
+    .quad   gdt
+
+.align 16
+gdt:
+    .quad   0x0000000000000000  # 先頭はnull descriptor
+    .quad   0x00af9a000000ffff  # kernel 64bit code segment
+    .quad   0x00cf92000000ffff  # kernel 64bit data segment
+    .quad   0x00cf9a000000ffff  # kernel 32bit code segment
+gdt_end:
 
 .code64
 .text
 start_long_mode:
+    mov     ax, 0
+    mov     ss, ax
+    mov     ds, ax
+    mov     es, ax
+    mov     fs, ax
+    mov     gs, ax
     # .bssセクションをクリア
     xor     al,al
     lea     rdi, [__bss]
