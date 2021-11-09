@@ -35,8 +35,12 @@ multiboot_header_end:
 .global boot
 boot:
     cli     # 割り込み禁止
+    # mov dword ptr [0xb8000], 0x2f4b2f4f
+    call    uartinit
     # スタック切り替え
     mov     esp, offset __kernel_stack
+    mov     di, '@'
+    call    uartwrite
 
     # multibootの情報を64bitでスタックに保存
     push    0
@@ -65,7 +69,7 @@ boot2:
     # ここから64bitモード移行作業
     # カーネルのページテーブルの構築を行う
     # ここでは2MBページング
-construct_page_table:
+/* construct_page_table:
     # PML4の構築
     lea edi, [__kernel_pagetable_pml4]
     lea eax, [__kernel_pagetable_pdpt + 0x103] # Present, writable, global
@@ -92,6 +96,28 @@ write_pd_entry:
     add eax, 0x200000 # 2MB
     add edi, 8
     loop write_pd_entry
+ */
+
+.global setup_page_tables
+setup_page_tables:
+    mov eax, p3_table
+    or eax, 0b11
+    mov [p4_table], eax
+
+    mov eax, p2_table
+    or eax, 0b11
+    mov [p3_table], eax
+
+    mov ecx, 0
+.map_p2_table:
+    mov eax, 0x200000
+    mul ecx
+    or eax, 0b10000011
+    mov [p2_table + ecx * 8], eax
+
+    inc ecx
+    cmp ecx, 512
+    jne .map_p2_table
 
     # 64bitモードに移行
 change_to_long_mode:
@@ -101,15 +127,15 @@ change_to_long_mode:
     mov     cr0, eax
     # PAEとPGEを1にセット
     mov     eax, cr4
-    or      eax, 1 << 5
+    or      eax, 0x20
     mov     cr4, eax
     # ページテーブルをセット
-    lea     eax, [__kernel_pagetable_pml4]
+    lea     eax, [p4_table]
     mov     cr3, eax
     # 64bitモードをon
     mov     ecx, 0xc0000080
     rdmsr
-    or      eax, 1 << 8
+    or      eax, 0x0900
     wrmsr
     # retfでCSを変えて飛ぶための準備
     mov     eax, 8                  # CSの構築(GDT1番)
@@ -118,9 +144,93 @@ change_to_long_mode:
     push    eax
     # ページングをon (CR0.PG = 1, CR0.PE = 1)
     mov     eax, cr0
-    or      eax, 1 << 31
+    or      eax, 0x1
     mov     cr0, eax
+    mov     eax, cr0
+    or      eax, 1 << 31
+    #hlt
+    mov     cr0, eax
+    mov dword ptr [0xb8000], 0x2f4b2f4f
     retf
+
+.global ioapicwrite
+ioapicwrite:
+    mov dword ptr   [0xfec00000], edi
+    mov dword ptr   [0xfec00000 + 12], esi
+    ret
+
+.global ioapicenable
+ioapicenable:
+    # disable pic
+    mov     ax, 0x00ff
+    out     0xa1, al
+    out     0x21, al
+    # enable apic
+    mov     edi, 0x18
+    mov     esi, 36
+    call    ioapicwrite
+    mov     edi, 0x19
+    mov     esi, 0
+    call    ioapicwrite
+    ret
+
+.global io_in8
+io_in8:
+    mov     edx,edi
+    in      al,dx
+    ret
+
+.global io_out8
+io_out8:
+    mov     edx,edi
+    mov     eax,esi
+    out     dx,al
+    ret
+
+.global uartinit
+uartinit:
+    mov     edi, 0x3fa
+    mov     esi, 0
+    call    io_out8
+
+    mov     edi, 0x3fb
+    mov     esi, 0x80
+    call    io_out8
+
+    mov     edi, 0x3f8
+    mov     esi, 12
+    call    io_out8
+
+    mov     edi, 0x3f9
+    mov     esi, 0
+    call    io_out8
+
+    mov     edi, 0x3fb
+    mov     esi, 0x03
+    call    io_out8
+
+    mov     edi, 0x3fc
+    mov     esi, 0
+    call    io_out8
+
+    mov     edi, 0x3f9
+    mov     esi, 1
+    call    io_out8
+
+    mov     edi, 0x3fa
+    call    io_in8
+    mov     edi, 0x3f8
+    call    io_in8
+
+    call    ioapicenable
+    ret
+
+.global uartwrite
+uartwrite:
+    mov     esi, edi
+    mov     edi, 0x3f8
+    call    io_out8
+    ret
 
 .align 16
 .global load_gdt
@@ -163,3 +273,12 @@ halt:
     cli
     hlt
     jmp     halt
+
+.bss
+.align 4096
+p4_table:
+    .skip 4096
+p3_table:
+    .skip 4096
+p2_table:
+    .skip 4096
