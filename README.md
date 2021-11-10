@@ -20,6 +20,12 @@ $ make build-kernel
 $ make build-iso
 ```
 
+### build kernel and generate iso file
+
+```sh
+$ make build
+```
+
 ### Release build
 
 ```sh
