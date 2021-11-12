@@ -19,6 +19,7 @@ unsafe extern "C" fn init_x86() {
                     uart::putc(com, c);
                     c += 1;
                 }
+                uart::putc(com, b'\r');
                 uart::putc(com, b'\n');
             }
             Ok(())
@@ -26,7 +27,7 @@ unsafe extern "C" fn init_x86() {
             Err(())
         }
     };
-    let r = serial(com2);
+    let r = serial(com1);
     match r {
         Ok(()) => (),
         Err(()) => {
