@@ -1,5 +1,10 @@
 # kani - 64 bit multiboot toy OS written in Rust
 
+## Test Environment
+
+- [qemu](https://www.qemu.org/)
+- [Cloud Edge 100](https://v2n.hatenablog.com/entry/2019/12/20/151246)
+
 ## build
 
 ### Requirements
