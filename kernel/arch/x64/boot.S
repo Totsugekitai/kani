@@ -65,36 +65,8 @@ boot2:
     # ここから64bitモード移行作業
     # カーネルのページテーブルの構築を行う
     # ここでは2MBページング
-/*construct_page_table:
-    # PML4の構築
-    lea edi, [__kernel_pagetable_pml4]
-    lea eax, [__kernel_pagetable_pdpt + 0x103] # Present, writable, global
-    mov dword ptr [edi], eax
-    mov dword ptr [edi + 4], 0
-
-    # PDPTの構築
-    lea edi, [__kernel_pagetable_pdpt]
-    lea eax, [__kernel_pagetable_pd + 0x103] # Present, writable, global
-    mov ecx, 4 # PDPTエントリの数
-write_pdpt_entry:
-    mov dword ptr [edi], eax
-    mov dword ptr [edi + 4], 0
-    add eax, 0x1000
-    add edi, 8
-    loop write_pdpt_entry
-    # PD
-    lea edi, [__kernel_pagetable_pd]
-    mov eax, 0x0000183 # Present, writable, global, ページサイズを2MB
-    mov ecx, 4 * 512 # PDPTエントリ数 * PDエントリ数
-write_pd_entry:
-    mov dword ptr [edi], eax
-    mov dword ptr [edi + 4], 0
-    add eax, 0x200000 # 2MB
-    add edi, 8
-    loop write_pd_entry
-*/
-.global setup_page_tables
-setup_page_tables:
+.global first_setup_page_tables
+first_setup_page_tables:
     lea     eax, [__kernel_pagetable_pdpt]
     or      eax, 0b11
     mov     [__kernel_pagetable_pml4], eax
@@ -106,7 +78,6 @@ setup_page_tables:
     mov     ecx, 0
     mov     eax, 0
 .map_p2_table:
-    # mov     eax, 0 # 0x200000
     mul     ecx
     or      eax, 0b10000011
     mov     [__kernel_pagetable_pd + ecx * 8], eax
@@ -171,28 +142,28 @@ start_long_mode:
     mov     es, ax
     mov     fs, ax
     mov     gs, ax
-
+second_setup_page_tables:
     # 追加のPDPTの構築
-    lea edi, [__kernel_pagetable_pdpt + 8]
-    lea eax, [__kernel_pagetable_pd + 0x1000 + 0x103] # Present, writable, global
-    mov ecx, 3 # 追加するPDPTエントリの数
-write_pdpt_entry:
-    mov dword ptr [edi], eax
-    mov dword ptr [edi + 4], 0
-    add eax, 0x1000
-    add edi, 8
-    loop write_pdpt_entry
+    lea     edi, [__kernel_pagetable_pdpt + 8]
+    lea     eax, [__kernel_pagetable_pd + 0x1000 + 0x103] # Present, writable, global
+    mov     ecx, 3 # 追加するPDPTエントリの数
+.write_pdpt_entry:
+    mov dword ptr   [edi], eax
+    mov dword ptr   [edi + 4], 0
+    add     eax, 0x1000
+    add     edi, 8
+    loop    .write_pdpt_entry
     # PD
-    lea edi, [__kernel_pagetable_pd + 8 * 512]
-    mov eax, 0x0000183 # Present, writable, global, ページサイズを2MB
-    add eax, 0x200000 * 512
-    mov ecx, 3 * 512 # PDPTエントリ数 * PDエントリ数
-write_pd_entry:
-    mov dword ptr [edi], eax
-    mov dword ptr [edi + 4], 0
-    add eax, 0x200000 # 2MB
-    add edi, 8
-    loop write_pd_entry
+    lea     edi, [__kernel_pagetable_pd + 8 * 512]
+    mov     eax, 0x0000183 # Present, writable, global, ページサイズを2MB
+    add     eax, 0x200000 * 512
+    mov     ecx, 3 * 512 # PDPTエントリ数 * PDエントリ数
+.write_pd_entry:
+    mov dword ptr   [edi], eax
+    mov dword ptr   [edi + 4], 0
+    add     eax, 0x200000 # 2MB
+    add     edi, 8
+    loop    .write_pd_entry
 
     # .bssセクションをクリア
     xor     al,al
@@ -212,84 +183,3 @@ halt:
     cli
     hlt
     jmp     halt
-
-/* .global ioapicwrite
-ioapicwrite:
-    mov dword ptr   [0xfec00000], edi
-    mov dword ptr   [0xfec00000 + 12], esi
-    ret
-
-.global ioapicenable
-ioapicenable:
-    # disable pic
-    mov     ax, 0x00ff
-    out     0xa1, al
-    out     0x21, al
-    # enable apic
-    mov     edi, 0x18
-    mov     esi, 36
-    call    ioapicwrite
-    mov     edi, 0x19
-    mov     esi, 0
-    call    ioapicwrite
-    ret
-
-.global io_in8
-io_in8:
-    mov     edx,edi
-    in      al,dx
-    ret
-
-.global io_out8
-io_out8:
-    mov     edx,edi
-    mov     eax,esi
-    out     dx,al
-    ret
-
-.global uartinit
-uartinit:
-    mov     edi, 0x3fa
-    mov     esi, 0
-    call    io_out8
-
-    mov     edi, 0x3fb
-    mov     esi, 0x80
-    call    io_out8
-
-    mov     edi, 0x3f8
-    mov     esi, 12
-    call    io_out8
-
-    mov     edi, 0x3f9
-    mov     esi, 0
-    call    io_out8
-
-    mov     edi, 0x3fb
-    mov     esi, 0x03
-    call    io_out8
-
-    mov     edi, 0x3fc
-    mov     esi, 0
-    call    io_out8
-
-    mov     edi, 0x3f9
-    mov     esi, 1
-    call    io_out8
-
-    mov     edi, 0x3fa
-    call    io_in8
-    mov     edi, 0x3f8
-    call    io_in8
-
-    call    ioapicenable
-    ret
-
-.global uartwrite
-uartwrite:
-    mov     esi, edi
-    mov     edi, 0x3f8
-    call    io_out8
-    ret
-
- */

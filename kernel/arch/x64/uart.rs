@@ -18,11 +18,20 @@ pub struct Uart {
     com: u16,
 }
 
+pub enum UartErrorKind {
+    NotImplement,
+    InvalidParams,
+}
+
 impl Uart {
     pub const fn new(com: u16) -> Self {
         Uart { com }
     }
-    pub unsafe fn init(self) -> Result<(), ()> {
+    pub unsafe fn init(self) -> Result<(), UartErrorKind> {
+        // 8259 PIC Disable
+        PortGeneric::<u8, WriteOnlyAccess>::new(0xa1).write(0xff);
+        PortGeneric::<u8, WriteOnlyAccess>::new(0x21).write(0xff);
+        // 16550A UART Enable
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0);
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 3).write(0x80);
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(1); // 115200 / 115200
@@ -32,7 +41,7 @@ impl Uart {
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0x01);
 
         if PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() == 0xff {
-            return Err(());
+            return Err(UartErrorKind::NotImplement);
         }
 
         PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 2).read();
@@ -43,11 +52,17 @@ impl Uart {
         } else if self.com == COM2 || self.com == COM4 {
             ioapic::enable(IRQ_COM2, 0);
         } else {
-            return Err(());
+            return Err(UartErrorKind::InvalidParams);
         }
         Ok(())
     }
 
+    #[cfg(feature = "qemu")]
+    pub unsafe fn write(self, c: u8) {
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(c);
+    }
+
+    #[cfg(not(feature = "qemu"))]
     pub unsafe fn write(self, c: u8) {
         while PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() & 0x20 != 0x20 {
             asm!("nop");
@@ -62,5 +77,17 @@ impl Write for Uart {
             unsafe { self.write(c) }
         }
         Ok(())
+    }
+}
+
+pub unsafe fn uart_init() {
+    match UART.lock().init() {
+        Ok(()) => (),
+        Err(e) => match e {
+            UartErrorKind::InvalidParams => {
+                panic!();
+            }
+            UartErrorKind::NotImplement => (),
+        },
     }
 }

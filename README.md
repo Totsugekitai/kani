@@ -33,8 +33,18 @@ $ make build
 
 ### Release build
 
+You set shell variable `RELEASE`.
+
 ```sh
-$ RELEASE=1 make ...
+$ RELEASE=1 make build
+```
+
+### if want to run in QEMU
+
+You set shell variable `QEMU`.
+
+```sh
+$ QEMU=1 make build
 ```
 
 ## Run

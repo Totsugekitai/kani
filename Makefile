@@ -6,6 +6,7 @@ MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 .SILENT:
 
 export RELEASE ?=
+export QEMU ?=
 export ARCH ?= x64
 
 target_json := kernel/arch/$(ARCH)/$(ARCH).json
@@ -29,11 +30,22 @@ build-iso:
 > grub-mkrescue -o kani.iso build
 
 .PHONY: build
+ifeq ($(QEMU),1)
+CARGOFLAGS += --features qemu
+endif
 build: build-kernel build-iso
 
 .PHONY: run
 run:
-> qemu-system-x86_64 -d int -no-shutdown -no-reboot -cdrom kani.iso -serial stdio -monitor telnet::1234,server,nowait -gdb tcp::1235
+> qemu-system-x86_64 -cdrom kani.iso -serial stdio
+
+.PHONY: debug-run
+debug-run:
+> qemu-system-x86_64 -d int -no-shutdown -no-reboot -cdrom kani.iso -serial stdio -monitor telnet::1234,server,nowait -gdb tcp::12345 -S
+
+.PHONY: debug-attach
+debug-attach:
+> gdb -ex 'file ./target/x64/debug/kani' -ex 'target remote localhost:12345' 
 
 .PHONY: all
 all: build-kernel build-iso run
