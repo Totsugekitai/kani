@@ -1,5 +1,3 @@
-use crate::arch::x64::uart::UART;
-
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::println::_print(format_args!($($arg)*)));
@@ -13,6 +11,7 @@ macro_rules! println {
 
 #[cfg(target_arch = "x86_64")]
 pub fn _print(args: core::fmt::Arguments) {
+    use crate::arch::x64::uart::UART;
     use x86_64::instructions::interrupts;
     interrupts::without_interrupts(|| {
         use core::fmt::Write;
