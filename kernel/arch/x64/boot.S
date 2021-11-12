@@ -69,7 +69,7 @@ boot2:
     # ここから64bitモード移行作業
     # カーネルのページテーブルの構築を行う
     # ここでは2MBページング
-/* construct_page_table:
+/*construct_page_table:
     # PML4の構築
     lea edi, [__kernel_pagetable_pml4]
     lea eax, [__kernel_pagetable_pdpt + 0x103] # Present, writable, global
@@ -96,28 +96,28 @@ write_pd_entry:
     add eax, 0x200000 # 2MB
     add edi, 8
     loop write_pd_entry
- */
-
+*/
 .global setup_page_tables
 setup_page_tables:
-    mov eax, p3_table
-    or eax, 0b11
-    mov [p4_table], eax
+    lea     eax, [__kernel_pagetable_pdpt]
+    or      eax, 0b11
+    mov     [__kernel_pagetable_pml4], eax
 
-    mov eax, p2_table
-    or eax, 0b11
-    mov [p3_table], eax
+    lea     eax, [__kernel_pagetable_pd]
+    or      eax, 0b11
+    mov     [__kernel_pagetable_pdpt], eax
 
-    mov ecx, 0
+    mov     ecx, 0
+    mov     eax, 0
 .map_p2_table:
-    mov eax, 0x200000
-    mul ecx
-    or eax, 0b10000011
-    mov [p2_table + ecx * 8], eax
-
-    inc ecx
-    cmp ecx, 512
-    jne .map_p2_table
+    # mov     eax, 0 # 0x200000
+    mul     ecx
+    or      eax, 0b10000011
+    mov     [__kernel_pagetable_pd + ecx * 8], eax
+    add     eax, 0x200000
+    inc     ecx
+    cmp     ecx, 512
+    jne     .map_p2_table
 
     # 64bitモードに移行
 change_to_long_mode:
@@ -130,7 +130,7 @@ change_to_long_mode:
     or      eax, 0x20
     mov     cr4, eax
     # ページテーブルをセット
-    lea     eax, [p4_table]
+    lea     eax, [__kernel_pagetable_pml4]
     mov     cr3, eax
     # 64bitモードをon
     mov     ecx, 0xc0000080
@@ -148,9 +148,8 @@ change_to_long_mode:
     mov     cr0, eax
     mov     eax, cr0
     or      eax, 1 << 31
-    #hlt
+    # hlt
     mov     cr0, eax
-    mov dword ptr [0xb8000], 0x2f4b2f4f
     retf
 
 .global ioapicwrite
@@ -255,6 +254,29 @@ start_long_mode:
     mov     es, ax
     mov     fs, ax
     mov     gs, ax
+
+    # 追加のPDPTの構築
+    lea edi, [__kernel_pagetable_pdpt + 8]
+    lea eax, [__kernel_pagetable_pd + 0x1000 + 0x103] # Present, writable, global
+    mov ecx, 3 # 追加するPDPTエントリの数
+write_pdpt_entry:
+    mov dword ptr [edi], eax
+    mov dword ptr [edi + 4], 0
+    add eax, 0x1000
+    add edi, 8
+    loop write_pdpt_entry
+    # PD
+    lea edi, [__kernel_pagetable_pd + 8 * 512]
+    mov eax, 0x0000183 # Present, writable, global, ページサイズを2MB
+    add eax, 0x200000 * 512
+    mov ecx, 3 * 512 # PDPTエントリ数 * PDエントリ数
+write_pd_entry:
+    mov dword ptr [edi], eax
+    mov dword ptr [edi + 4], 0
+    add eax, 0x200000 # 2MB
+    add edi, 8
+    loop write_pd_entry
+
     # .bssセクションをクリア
     xor     al,al
     lea     rdi, [__bss]

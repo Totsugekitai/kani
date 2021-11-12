@@ -33,7 +33,7 @@ build: build-kernel build-iso
 
 .PHONY: run
 run:
-> qemu-system-x86_64 -d int -no-shutdown -no-reboot -cdrom kani.iso -serial stdio
+> qemu-system-x86_64 -d int -no-shutdown -no-reboot -cdrom kani.iso -serial stdio -monitor telnet::1234,server,nowait -gdb tcp::1235
 
 .PHONY: all
 all: build-kernel build-iso run
