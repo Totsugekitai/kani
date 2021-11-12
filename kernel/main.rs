@@ -1,10 +1,10 @@
 #![no_std]
 #![no_main]
 #![feature(asm)]
-#![feature(llvm_asm)]
 #![feature(global_asm)]
 
-mod arch;
+pub mod arch;
+pub mod println;
 
 use core::panic::PanicInfo;
 #[panic_handler]
