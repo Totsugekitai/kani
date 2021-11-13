@@ -71,11 +71,17 @@ impl Uart {
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(c);
     }
 
+    #[cfg(feature = "qemu")]
     pub unsafe fn read(self) -> u8 {
-        /*         while PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() & 1 != 1 {
-                   asm!("nop");
-               }
-        */
+        PortGeneric::<u16, ReadOnlyAccess>::new(self.com).read() as u8
+    }
+
+    #[cfg(not(feature = "qemu"))]
+    pub unsafe fn read(self) -> u8 {
+        while PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() & 1 != 1 {
+            asm!("nop");
+        }
+
         PortGeneric::<u16, ReadOnlyAccess>::new(self.com).read() as u8
     }
 }

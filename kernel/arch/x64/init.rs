@@ -1,15 +1,19 @@
 use super::gdt::gdt_init;
 use super::interrupts::idt_init;
 use super::uart::uart_init;
+use crate::logger;
 use crate::println;
+
+use log::info;
 
 #[no_mangle]
 #[warn(dead_code)]
-unsafe extern "C" fn init_x86() {
+pub unsafe extern "C" fn init_x86() {
     uart_init();
+    let _ = logger::init();
     gdt_init();
     idt_init();
     println!("\r\nHello, kani!");
-    println!("ok.");
+    info!("boot ok.");
     loop {}
 }

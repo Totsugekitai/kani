@@ -96,7 +96,7 @@ extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
         let c = UART.lock().read();
         notify_end_of_interrupt();
         interrupts::enable();
-        if c == b'\n' {
+        if c == b'\r' {
             println!("");
         } else {
             print!("{}", c as char);
