@@ -54,6 +54,7 @@ impl Uart {
         } else {
             return Err(UartErrorKind::InvalidParams);
         }
+        x86_64::instructions::interrupts::enable();
         Ok(())
     }
 
@@ -68,6 +69,14 @@ impl Uart {
             asm!("nop");
         }
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(c);
+    }
+
+    pub unsafe fn read(self) -> u8 {
+        /*         while PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() & 1 != 1 {
+                   asm!("nop");
+               }
+        */
+        PortGeneric::<u16, ReadOnlyAccess>::new(self.com).read() as u8
     }
 }
 

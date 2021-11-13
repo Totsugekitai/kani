@@ -1,5 +1,5 @@
-use super::gdt;
-use crate::println;
+use super::{gdt, uart::UART};
+use crate::{print, println};
 use lazy_static::lazy_static;
 use x86_64::structures::idt::*;
 
@@ -16,12 +16,17 @@ lazy_static! {
         idt.bound_range_exceeded
             .set_handler_fn(bound_range_exceeded_handler);
 
+        idt[InterruptIndex::Uart.as_usize()].set_handler_fn(uart_handler);
+
         unsafe {
             idt.double_fault
                 .set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
             idt.load_unsafe();
         }
+
+        //idt[InterruptIndex::Uart.as_usize()].set_handler_fn(uart_handler);
+
         idt
     };
 }
@@ -62,4 +67,41 @@ extern "x86-interrupt" fn double_fault_handler(
         "EXCEPTION: DOUBLE FAULT\r\nstackframe: {:#?}\r\nerror code: {:#?}",
         stack_frame, error_code
     );
+}
+
+const UART_OFFSET: u8 = 36;
+
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum InterruptIndex {
+    Uart = UART_OFFSET,
+}
+
+impl InterruptIndex {
+    fn as_u8(self) -> u8 {
+        self as u8
+    }
+
+    fn as_usize(self) -> usize {
+        usize::from(self.as_u8())
+    }
+}
+
+unsafe fn notify_end_of_interrupt() {
+    core::ptr::write_volatile(0xFEE0_00B0 as *mut u32, 0);
+}
+
+extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
+    use x86_64::instructions::interrupts;
+    interrupts::disable();
+    unsafe {
+        let c = UART.lock().read();
+        notify_end_of_interrupt();
+        interrupts::enable();
+        if c == b'\n' {
+            print!("{}", "\r\n");
+        } else {
+            print!("{}", c as char);
+        }
+    }
 }
