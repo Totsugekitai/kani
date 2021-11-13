@@ -3,7 +3,8 @@
 ## Test Environment
 
 - [qemu](https://www.qemu.org/)
-- [Cloud Edge 100](https://v2n.hatenablog.com/entry/2019/12/20/151246)
+- [Cloud Edge 100](https://www.trendmicro.co.jp/business/products/cloudedge/index.html#specification)
+- [Cloud Edge 70](https://www.trendmicro.co.jp/business/products/cloudedge/index.html#specification)
 
 ## build
 
