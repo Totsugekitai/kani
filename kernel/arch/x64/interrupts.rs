@@ -25,8 +25,6 @@ lazy_static! {
             idt.load_unsafe();
         }
 
-        //idt[InterruptIndex::Uart.as_usize()].set_handler_fn(uart_handler);
-
         idt
     };
 }
@@ -99,7 +97,7 @@ extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
         notify_end_of_interrupt();
         interrupts::enable();
         if c == b'\n' {
-            print!("{}", "\r\n");
+            println!("");
         } else {
             print!("{}", c as char);
         }
