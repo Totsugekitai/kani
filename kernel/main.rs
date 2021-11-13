@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(asm)]
 #![feature(global_asm)]
+#![feature(abi_x86_interrupt)]
 
 pub mod arch;
 pub mod println;
