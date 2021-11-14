@@ -1,7 +1,9 @@
 use crate::arch::x64::ioapic;
+use crate::{print, println};
 use core::fmt::Write;
 use spin::mutex::Mutex;
 use x86_64::instructions::port::{PortGeneric, ReadOnlyAccess, WriteOnlyAccess};
+use x86_64::structures::idt::InterruptStackFrame;
 
 pub const COM1: u16 = 0x3f8;
 pub const COM2: u16 = 0x2f8;
@@ -104,5 +106,20 @@ pub unsafe fn uart_init() {
             }
             UartErrorKind::NotImplement => (),
         },
+    }
+}
+
+pub extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
+    use x86_64::instructions::interrupts;
+    interrupts::disable();
+    unsafe {
+        let c = UART.lock().read();
+        super::interrupts::notify_end_of_interrupt();
+        interrupts::enable();
+        if c == b'\r' {
+            println!("");
+        } else {
+            print!("{}", c as char);
+        }
     }
 }
