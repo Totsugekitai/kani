@@ -76,12 +76,11 @@ first_setup_page_tables:
     mov     [__kernel_pagetable_pdpt], eax
 
     mov     ecx, 0
-    mov     eax, 0
 .map_p2_table:
+    mov     eax, 0x200000
     mul     ecx
     or      eax, 0b10000011
     mov     [__kernel_pagetable_pd + ecx * 8], eax
-    add     eax, 0x200000
     inc     ecx
     cmp     ecx, 512
     jne     .map_p2_table
