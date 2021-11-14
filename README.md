@@ -1,5 +1,7 @@
 # kani - 64 bit multiboot toy OS written in Rust
 
+Sorry, no GUI, Serial only.
+
 ## Test Environment
 
 - [qemu](https://www.qemu.org/)
