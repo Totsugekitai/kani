@@ -4,9 +4,10 @@ use super::lapic::lapic_init;
 use super::uart::uart_init;
 use crate::logger;
 use crate::println;
-
 use log::info;
-use x86_64::structures::paging::Translate;
+use x86_64::structures::paging::{Page, Size2MiB, Translate};
+
+const INIT_PAGING_PHYS_MEM_OFFSET: u64 = 0;
 
 #[no_mangle]
 #[warn(dead_code)]
@@ -19,13 +20,13 @@ pub unsafe extern "C" fn init_x86() {
 
     use super::paging;
     use x86_64::VirtAddr;
-    let phys_mem_offset = VirtAddr::new(0);
-    let mapper = paging::init(phys_mem_offset);
+    let phys_mem_offset = VirtAddr::new(INIT_PAGING_PHYS_MEM_OFFSET);
+    let mut mapper = paging::init(phys_mem_offset);
+    let mut frame_allocator = paging::EmptyFrameAllocator;
 
     let addresses = [
         0x0,
         0xFEE0_00F0,
-        // コードページのどこか
         0x201008,
         0xFFFF_FFFF,
         0x1_0000_0000,
@@ -37,6 +38,13 @@ pub unsafe extern "C" fn init_x86() {
         let phys = mapper.translate_addr(virt);
         println!("{:?} -> {:?}", virt, phys);
     }
+
+    core::ptr::write_volatile(0xB_8000 as *mut u64, 0x_f021_f077_f065_f04e);
+
+    let unused_page = Page::<Size2MiB>::containing_address(VirtAddr::new(0x2_0000_0000));
+    paging::create_example_mapping(unused_page, &mut mapper, &mut frame_allocator);
+    let page_ptr: *mut u64 = unused_page.start_address().as_mut_ptr();
+    page_ptr.offset(0).write_volatile(0x_f021_f077_f065_f04e);
 
     println!("Hello, kani!");
     info!("boot ok.");
