@@ -66,8 +66,6 @@ SECTIONS {
         __kernel_image_end = .; /* physical address */
     }
 
-    __peripheral = 0xfe000000;
-
     /DISCARD/ : {
         *(*.eh_frame);
         *(*.eh_frame_hdr);

@@ -180,8 +180,6 @@ pub unsafe fn process_info(addr: usize) -> BootInfo {
             _ => {
                 if tag.info_type as u32 > 21 {
                     panic!("unknown type of multiboot2 information: {}", tag.info_type);
-                } else {
-                    debug!("unknown type of multiboot2 information: {}", tag.info_type);
                 }
             }
         }

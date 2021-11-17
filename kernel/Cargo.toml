@@ -17,3 +17,8 @@ arrayvec = { version = "0.7.2", default-features = false }
 
 [features]
 qemu = []
+log_error = []
+log_warn = []
+log_info = []
+log_debug = []
+log_trace = []

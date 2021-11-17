@@ -31,7 +31,6 @@ pub struct FrameAllocator {
 extern "C" {
     static __kernel_image: u8;
     static __kernel_image_end: u8;
-    static __peripheral: u8;
 }
 
 impl FrameAllocator {
@@ -62,7 +61,6 @@ pub fn create_example_mapping(
             "__kernel_image_end: 0x{:x}",
             &__kernel_image_end as *const u8 as usize
         );
-        info!("__peripheral: 0x{:x}", &__peripheral as *const u8 as usize);
     }
     let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
     let flags = Flags::PRESENT | Flags::WRITABLE;
