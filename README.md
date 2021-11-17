@@ -66,11 +66,11 @@ $ make run
 
 There are 5 log level.
 
-- error
-- warn
-- debug
-- info
-- trace
+- `error`
+- `warn`
+- `debug`
+- `info`
+- `trace`
 
 Default level is `info`.
 You set shell variable `LOG`.
