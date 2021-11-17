@@ -11,7 +11,7 @@ const DIVIDE_CONFIG: *mut u32 = 0xFEE0_03E0 as *mut u32;
 
 pub const TIMER_INTERVAL: u32 = 10000000; // TODO: ちゃんと計算する！
 
-pub unsafe fn lapic_init() {
+pub unsafe fn init() {
     let mut ia32_apic_base = x86_64::registers::model_specific::Msr::new(0x1b);
     let ia32_apic_base_value = ia32_apic_base.read();
     let ia32_apic_base_value = ia32_apic_base_value | (1 << 11);

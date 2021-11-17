@@ -42,7 +42,7 @@ struct Selectors {
     tss_selector: SegmentSelector,
 }
 
-pub fn gdt_init() {
+pub fn init() {
     GDT.0.load();
     unsafe {
         CS::set_reg(GDT.1.code_selector);

@@ -98,7 +98,7 @@ impl Write for Uart {
     }
 }
 
-pub unsafe fn uart_init() {
+pub unsafe fn init() {
     match UART.lock().init() {
         Ok(()) => (),
         Err(e) => match e {

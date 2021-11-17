@@ -1,5 +1,6 @@
 use arrayvec::ArrayVec;
 use log::debug;
+use spin::mutex::Mutex;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -133,8 +134,18 @@ pub struct BootInfo {
     pub memory_map: ArrayVec<MemoryMapEntry, 8>,
 }
 
+impl BootInfo {
+    const fn new() -> Self {
+        Self {
+            memory_map: ArrayVec::new(),
+        }
+    }
+}
+
+static BOOTINFO: Mutex<BootInfo> = Mutex::new(BootInfo::new());
+
 /// multiboot2のマジックが正しいか判定する
-pub fn is_magic_correct(magic: u32) -> bool {
+fn is_magic_correct(magic: u32) -> bool {
     const MULTIBOOT2_MAGIC: u32 = 0x36d76289;
     if magic == MULTIBOOT2_MAGIC {
         true
@@ -145,10 +156,8 @@ pub fn is_magic_correct(magic: u32) -> bool {
 
 /// multiboot2 information headerのtypeによって処理を振り分ける関数
 #[allow(unaligned_references)]
-pub unsafe fn process_info(addr: usize) -> BootInfo {
-    let mut boot_info = BootInfo {
-        memory_map: ArrayVec::new(),
-    };
+pub unsafe fn process_info(addr: usize) {
+    let mut boot_info = BootInfo::new();
 
     let base_addr = addr as *const BasicHeader;
     let mut total_size = (*base_addr).total_size;
@@ -191,7 +200,7 @@ pub unsafe fn process_info(addr: usize) -> BootInfo {
         total_size -= tag_size;
         tag_ptr = (tag_ptr as usize + tag_size as usize) as *const InfoTagHeader;
     }
-    boot_info
+    *BOOTINFO.lock() = boot_info;
 }
 
 /// multibootから渡されてきたメモリマップをパースする関数
@@ -216,4 +225,13 @@ unsafe fn parse_memory_map(ptr: *const MemoryMapEntry, n: u32) -> BootInfo {
             (entry_ptr as usize + core::mem::size_of::<MemoryMapEntry>()) as *const MemoryMapEntry;
     }
     boot_info
+}
+
+pub fn init(magic: u32, addr: usize) {
+    if !is_magic_correct(magic) {
+        panic!("multiboot2 magic is incorrect.");
+    }
+    unsafe {
+        process_info(addr);
+    }
 }

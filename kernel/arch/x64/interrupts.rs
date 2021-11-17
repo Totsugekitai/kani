@@ -31,7 +31,7 @@ lazy_static! {
     };
 }
 
-pub fn idt_init() {
+pub fn init() {
     IDT.load();
     x86_64::instructions::interrupts::enable();
     info!("init IDT");
