@@ -1,5 +1,5 @@
 use super::interrupts::InterruptIndex;
-use log::debug;
+use log::trace;
 use spin::mutex::Mutex;
 use x86_64::structures::idt::InterruptStackFrame;
 
@@ -9,7 +9,7 @@ const INITIAL_COUNT: *mut u32 = 0xFEE0_0380 as *mut u32;
 //const CURRENT_COUNT: *mut usize = 0xFEE0_0390 as *mut usize;
 const DIVIDE_CONFIG: *mut u32 = 0xFEE0_03E0 as *mut u32;
 
-pub const TIMER_INTERVAL: u32 = 10000000;
+pub const TIMER_INTERVAL: u32 = 10000000; // TODO: ちゃんと計算する！
 
 pub unsafe fn lapic_init() {
     let mut ia32_apic_base = x86_64::registers::model_specific::Msr::new(0x1b);
@@ -50,5 +50,5 @@ pub extern "x86-interrupt" fn lapic_handler(_: InterruptStackFrame) {
         super::interrupts::notify_end_of_interrupt();
     }
     x86_64::instructions::interrupts::enable();
-    debug!("LAPIC interrupt. Tick: {}", tick::get());
+    trace!("LAPIC interrupt. Tick: {}", tick::get());
 }

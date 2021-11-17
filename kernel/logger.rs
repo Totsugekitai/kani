@@ -4,8 +4,35 @@ use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 struct Logger;
 
 impl log::Log for Logger {
+    #[cfg(feature = "log_error")]
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Error
+    }
+    #[cfg(feature = "log_warn")]
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Warn
+    }
+    #[cfg(feature = "log_debug")]
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Debug
+    }
+    #[cfg(feature = "log_info")]
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
+    }
+    #[cfg(feature = "log_trace")]
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Trace
+    }
+    #[cfg(not(any(
+        feature = "log_error",
+        feature = "log_warn",
+        feature = "log_debug",
+        feature = "log_info",
+        feature = "log_trace"
+    )))]
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
     }
 
     fn log(&self, record: &Record) {
