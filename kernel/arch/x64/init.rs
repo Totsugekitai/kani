@@ -5,7 +5,7 @@ use super::multiboot2;
 use super::uart::uart_init;
 use crate::logger;
 use crate::println;
-use log::info;
+use log::{debug, info};
 use x86_64::structures::paging::Translate;
 
 const INIT_PAGING_PHYS_MEM_OFFSET: u64 = 0;
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn init_x86(magic: u32, bootinfo: usize) {
     for &address in &addresses {
         let virt = VirtAddr::new(address);
         let phys = mapper.translate_addr(virt);
-        println!("{:?} -> {:?}", virt, phys);
+        debug!("{:?} -> {:?}", virt, phys);
     }
 
     core::ptr::write_volatile(0xB_8000 as *mut u64, 0x_f021_f077_f065_f04e);
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn init_x86(magic: u32, bootinfo: usize) {
     if !multiboot2::is_magic_correct(magic) {
         panic!("multiboot2 magic is incorrect.");
     }
-    multiboot2::process_info(bootinfo);
+    let _boot_info = multiboot2::process_info(bootinfo);
 
     println!("Hello, kani!");
     info!("boot ok.");

@@ -1,4 +1,5 @@
-use log::{debug, info};
+use arrayvec::ArrayVec;
+use log::debug;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -96,10 +97,10 @@ struct MemoryMapTag {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-struct MemoryMapEntry {
-    base_addr: u64,
-    length: u64,
-    entry_type: MemoryMapType,
+pub struct MemoryMapEntry {
+    pub base_addr: u64,
+    pub length: u64,
+    pub entry_type: MemoryMapType,
     reserved: u32,
 }
 
@@ -107,7 +108,7 @@ struct MemoryMapEntry {
 #[allow(dead_code)]
 #[non_exhaustive]
 #[repr(u32)]
-enum MemoryMapType {
+pub enum MemoryMapType {
     Available = 1,
     Acpi = 3,
     ReservedForHibernation = 4,
@@ -127,10 +128,14 @@ impl core::fmt::Display for MemoryMapType {
     }
 }
 
-const MULTIBOOT2_MAGIC: u32 = 0x36d76289;
+#[derive(Debug, Clone)]
+pub struct BootInfo {
+    pub memory_map: ArrayVec<MemoryMapEntry, 8>,
+}
 
 /// multiboot2のマジックが正しいか判定する
 pub fn is_magic_correct(magic: u32) -> bool {
+    const MULTIBOOT2_MAGIC: u32 = 0x36d76289;
     if magic == MULTIBOOT2_MAGIC {
         true
     } else {
@@ -140,14 +145,18 @@ pub fn is_magic_correct(magic: u32) -> bool {
 
 /// multiboot2 information headerのtypeによって処理を振り分ける関数
 #[allow(unaligned_references)]
-pub unsafe fn process_info(addr: usize) {
+pub unsafe fn process_info(addr: usize) -> BootInfo {
+    let mut boot_info = BootInfo {
+        memory_map: ArrayVec::new(),
+    };
+
     let base_addr = addr as *const BasicHeader;
     let mut total_size = (*base_addr).total_size;
     let mut tag_ptr =
         (base_addr as usize + core::mem::size_of::<BasicHeader>()) as *const InfoTagHeader;
     while total_size > 0 {
         let tag = tag_ptr.as_ref().unwrap();
-        info!(
+        debug!(
             "tag_base: 0x{:x}, tag type: {}, tag size: 0x{:x}",
             tag_ptr as usize, tag.info_type, tag.size
         );
@@ -159,7 +168,7 @@ pub unsafe fn process_info(addr: usize) {
                     as *const MemoryMapEntry;
                 let num_entries =
                     (tag.size - core::mem::size_of::<MemoryMapTag>() as u32) / mmap_tag.entry_size;
-                parse_memory_map(entry_ptr, num_entries);
+                boot_info = parse_memory_map(entry_ptr, num_entries);
             }
             InfoType::Terminate => {
                 debug!(
@@ -184,21 +193,29 @@ pub unsafe fn process_info(addr: usize) {
         total_size -= tag_size;
         tag_ptr = (tag_ptr as usize + tag_size as usize) as *const InfoTagHeader;
     }
+    boot_info
 }
 
+/// multibootから渡されてきたメモリマップをパースする関数
 #[allow(unaligned_references)]
-unsafe fn parse_memory_map(ptr: *const MemoryMapEntry, n: u32) {
+unsafe fn parse_memory_map(ptr: *const MemoryMapEntry, n: u32) -> BootInfo {
+    let mut boot_info = BootInfo {
+        memory_map: ArrayVec::new(),
+    };
+
     let mut entry_ptr = ptr;
     for i in 0..n {
         let entry = entry_ptr.as_ref().unwrap();
-        info!(
+        debug!(
             "Memory Map {}: base_addr=0x{:x}, len=0x{:x}, type={}",
             i, entry.base_addr, entry.length, entry.entry_type
         );
+        if let MemoryMapType::Available = entry.entry_type {
+            boot_info.memory_map.push(entry.clone());
+        }
 
         entry_ptr =
             (entry_ptr as usize + core::mem::size_of::<MemoryMapEntry>()) as *const MemoryMapEntry;
     }
+    boot_info
 }
-
-//fn memory_map(entry: &MemoryMapEntry) {}
