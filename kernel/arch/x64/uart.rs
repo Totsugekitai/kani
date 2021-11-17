@@ -1,6 +1,7 @@
 use crate::arch::x64::ioapic;
 use crate::{print, println};
 use core::fmt::Write;
+use log::info;
 use spin::mutex::Mutex;
 use x86_64::instructions::port::{PortGeneric, ReadOnlyAccess, WriteOnlyAccess};
 use x86_64::structures::idt::InterruptStackFrame;
@@ -107,6 +108,8 @@ pub unsafe fn uart_init() {
             UartErrorKind::NotImplement => (),
         },
     }
+    remove_screen();
+    info!("init UART");
 }
 
 pub extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
@@ -122,4 +125,9 @@ pub extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
             print!("{}", c as char);
         }
     }
+}
+
+pub fn remove_screen() {
+    let mut uart = UART.lock();
+    let _ = uart.write_str("\x1b[2J\x1b[1;1H");
 }

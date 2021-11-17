@@ -53,13 +53,15 @@ build-iso:
 .PHONY: build
 build: build-kernel build-iso
 
+QEMUFLAGS += -cdrom kani.iso -serial stdio
+
 .PHONY: run
 run:
-> qemu-system-x86_64 -cdrom kani.iso -serial stdio
+> qemu-system-x86_64 $(QEMUFLAGS)
 
 .PHONY: debug-run
 debug-run:
-> qemu-system-x86_64 -d int -no-shutdown -no-reboot -cdrom kani.iso -serial stdio -monitor telnet::1234,server,nowait -gdb tcp::12345 -S
+> qemu-system-x86_64 $(QEMUFLAGS) -no-shutdown -no-reboot -monitor telnet::1234,server,nowait -gdb tcp::12345 -S #-d int 
 
 .PHONY: debug-attach
 debug-attach:

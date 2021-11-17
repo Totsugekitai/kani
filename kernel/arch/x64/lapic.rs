@@ -1,5 +1,5 @@
 use super::interrupts::InterruptIndex;
-use log::trace;
+use log::{info, trace};
 use spin::rwlock::RwLock;
 use x86_64::structures::idt::InterruptStackFrame;
 
@@ -26,6 +26,8 @@ pub unsafe fn lapic_init() {
         (0b10 << 16) | InterruptIndex::Lapic.as_usize() as u32,
     );
     core::ptr::write_volatile(INITIAL_COUNT, TIMER_INTERVAL);
+
+    info!("init LAPIC");
 }
 
 static TICK: RwLock<usize> = RwLock::new(0);

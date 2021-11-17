@@ -1,6 +1,7 @@
 use super::gdt;
 use crate::println;
 use lazy_static::lazy_static;
+use log::info;
 use x86_64::structures::idt::*;
 
 lazy_static! {
@@ -33,6 +34,7 @@ lazy_static! {
 pub fn idt_init() {
     IDT.load();
     x86_64::instructions::interrupts::enable();
+    info!("init IDT");
 }
 
 extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
