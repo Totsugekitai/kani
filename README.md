@@ -61,3 +61,20 @@ $ QEMU=1 make build
 ```sh
 $ make run
 ```
+
+## Log Level
+
+There are 5 log level.
+
+- error
+- warn
+- debug
+- info
+- trace
+
+Default level is `info`.
+You set shell variable `LOG`.
+
+```sh
+$ LOG=debug make build
+```
