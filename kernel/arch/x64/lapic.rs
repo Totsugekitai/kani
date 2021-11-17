@@ -1,6 +1,6 @@
 use super::interrupts::InterruptIndex;
 use log::trace;
-use spin::mutex::Mutex;
+use spin::rwlock::RwLock;
 use x86_64::structures::idt::InterruptStackFrame;
 
 const SVR: *mut u32 = 0xFEE0_00F0 as *mut u32;
@@ -28,27 +28,22 @@ pub unsafe fn lapic_init() {
     core::ptr::write_volatile(INITIAL_COUNT, TIMER_INTERVAL);
 }
 
-static TICK: Mutex<usize> = Mutex::new(0);
+static TICK: RwLock<usize> = RwLock::new(0);
 
 pub mod tick {
     pub fn get() -> usize {
         use super::TICK;
-        use x86_64::instructions::interrupts;
-        let mut tick = 0;
-        interrupts::without_interrupts(|| tick = *TICK.lock());
-        tick
+        *TICK.read()
     }
 }
 
 pub extern "x86-interrupt" fn lapic_handler(_: InterruptStackFrame) {
-    x86_64::instructions::interrupts::disable();
-    {
-        let mut tick = TICK.lock(); // must be included in this block!
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let mut tick = TICK.write();
         *tick += 1;
-    }
-    unsafe {
-        super::interrupts::notify_end_of_interrupt();
-    }
-    x86_64::instructions::interrupts::enable();
+        unsafe {
+            super::interrupts::notify_end_of_interrupt();
+        }
+    });
     trace!("LAPIC interrupt. Tick: {}", tick::get());
 }
