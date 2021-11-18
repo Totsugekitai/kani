@@ -105,7 +105,7 @@ pub unsafe fn init() {
             UartErrorKind::InvalidParams => {
                 panic!();
             }
-            UartErrorKind::NotImplement => (),
+            UartErrorKind::NotImplement => (), // FIXME: correct error handling
         },
     }
     remove_screen();

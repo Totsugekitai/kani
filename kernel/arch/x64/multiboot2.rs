@@ -1,4 +1,5 @@
 use arrayvec::ArrayVec;
+use lazy_static::lazy_static;
 use log::debug;
 use spin::mutex::Mutex;
 
@@ -134,30 +135,27 @@ pub struct BootInfo {
     pub memory_map: ArrayVec<MemoryMapEntry, 8>,
 }
 
-impl BootInfo {
-    const fn new() -> Self {
-        Self {
+lazy_static! {
+    static ref BOOTINFO: Mutex<BootInfo> = {
+        let boot_info = BootInfo {
             memory_map: ArrayVec::new(),
-        }
-    }
+        };
+        Mutex::new(boot_info)
+    };
 }
-
-static BOOTINFO: Mutex<BootInfo> = Mutex::new(BootInfo::new());
 
 /// multiboot2のマジックが正しいか判定する
 fn is_magic_correct(magic: u32) -> bool {
     const MULTIBOOT2_MAGIC: u32 = 0x36d76289;
-    if magic == MULTIBOOT2_MAGIC {
-        true
-    } else {
-        false
-    }
+    magic == MULTIBOOT2_MAGIC
 }
 
 /// multiboot2 information headerのtypeによって処理を振り分ける関数
 #[allow(unaligned_references)]
-pub unsafe fn process_info(addr: usize) {
-    let mut boot_info = BootInfo::new();
+unsafe fn process_info(addr: usize) {
+    let mut boot_info = BootInfo {
+        memory_map: ArrayVec::new(),
+    };
 
     let base_addr = addr as *const BasicHeader;
     let mut total_size = (*base_addr).total_size;

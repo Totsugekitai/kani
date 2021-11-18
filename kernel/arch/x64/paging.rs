@@ -1,6 +1,6 @@
 use log::info;
 use x86_64::{
-    structures::paging::{Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size2MiB, Size4KiB},
+    structures::paging::{Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size4KiB},
     PhysAddr, VirtAddr,
 };
 
@@ -47,7 +47,7 @@ unsafe impl x86_64::structures::paging::FrameAllocator<Size4KiB> for FrameAlloca
 
 /// 与えられたページを`0xb8000`が含まれているフレームにマップする
 pub fn create_example_mapping(
-    page: Page<Size2MiB>,
+    page: Page<Size4KiB>,
     mapper: &mut OffsetPageTable,
     frame_allocator: &mut impl x86_64::structures::paging::FrameAllocator<Size4KiB>,
 ) {
@@ -73,6 +73,6 @@ pub struct EmptyFrameAllocator;
 
 unsafe impl x86_64::structures::paging::FrameAllocator<Size4KiB> for EmptyFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        Some(PhysFrame::containing_address(PhysAddr::new(0xb_8000)))
+        None
     }
 }
