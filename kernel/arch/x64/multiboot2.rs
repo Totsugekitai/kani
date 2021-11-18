@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
 use lazy_static::lazy_static;
-use log::debug;
+use log::{debug, info};
 use spin::mutex::Mutex;
 
 #[derive(Debug, Clone, Copy)]
@@ -232,4 +232,5 @@ pub fn init(magic: u32, addr: usize) {
     unsafe {
         process_info(addr);
     }
+    info!("init multiboot information");
 }

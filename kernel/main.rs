@@ -11,6 +11,7 @@ pub mod allocator;
 pub mod arch;
 pub mod logger;
 pub mod println;
+pub mod task;
 
 use core::panic::PanicInfo;
 use log::error;

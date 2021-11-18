@@ -1,5 +1,5 @@
 use super::{gdt, interrupts, lapic, multiboot2, uart};
-use crate::{allocator, logger, println};
+use crate::{allocator, arch::task::ContextX64, logger, println, task};
 use alloc::boxed::Box;
 use log::{debug, info};
 use x86_64::structures::paging::Translate;
@@ -7,7 +7,6 @@ use x86_64::structures::paging::Translate;
 const INIT_PAGING_PHYS_MEM_OFFSET: u64 = 0;
 
 #[no_mangle]
-#[warn(dead_code)]
 pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize) {
     let _ = logger::init();
     uart::init();
@@ -43,10 +42,25 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     info!("boot ok.");
     println!("Hello, kani!");
 
-    let newbox = Box::new(3);
-    println!("{:?}", newbox);
+    let task_a_stack = Box::new([0u8; 0x1000]);
+    let task_b_stack = Box::new([0u8; 0x1000]);
+
+    let task_a = task::Task::<ContextX64>::new();
+    let task_b = task::Task::<ContextX64>::new();
 
     loop {
         x86_64::instructions::hlt();
+    }
+}
+
+fn task_a_fn() {
+    loop {
+        println!("Task A is running...");
+    }
+}
+
+fn task_b_fn() {
+    loop {
+        println!("Task B is running...");
     }
 }
