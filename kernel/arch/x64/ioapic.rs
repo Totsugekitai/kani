@@ -1,4 +1,4 @@
-#[repr(C)]
+#[repr(C, packed)]
 struct IoApic {
     reg: u32,
     pad: [u32; 3],
@@ -15,7 +15,7 @@ pub unsafe fn write(reg: u32, data: u32) {
         pad: [0; 3],
         data,
     };
-    core::ptr::write_volatile::<IoApic>(IOAPIC, ioapic);
+    core::ptr::write_volatile(IOAPIC, ioapic);
 }
 
 pub unsafe fn enable(irq: u32, cpunum: u32) {

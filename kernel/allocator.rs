@@ -1,16 +1,13 @@
+use super::arch;
 use linked_list_allocator::LockedHeap;
 
 #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-extern "C" {
-    static __kernel_heap: u8;
-}
-
 const HEAP_SIZE: usize = 0x1000 * 0x1000;
 
+#[cfg(target_arch = "x86_64")]
 pub unsafe fn init() {
-    ALLOCATOR
-        .lock()
-        .init(&__kernel_heap as *const u8 as usize, HEAP_SIZE);
+    let heap_bottom = arch::x64::allocator::init();
+    ALLOCATOR.lock().init(heap_bottom, HEAP_SIZE);
 }

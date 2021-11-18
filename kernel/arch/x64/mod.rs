@@ -1,5 +1,6 @@
 global_asm!(include_str!("boot.S"));
 
+pub mod allocator;
 pub mod gdt;
 pub mod init;
 pub mod interrupts;
