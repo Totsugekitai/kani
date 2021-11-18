@@ -64,6 +64,7 @@ SECTIONS {
 
         . = ALIGN(4096);
         __kernel_image_end = .; /* physical address */
+        __kernel_heap = .;
     }
 
     /DISCARD/ : {

@@ -1,5 +1,6 @@
 use super::{gdt, interrupts, lapic, multiboot2, uart};
-use crate::{logger, println};
+use crate::{allocator, logger, println};
+use alloc::boxed::Box;
 use log::{debug, info};
 use x86_64::structures::paging::Translate;
 
@@ -37,8 +38,13 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
         }
     }
 
+    allocator::init();
+
     info!("boot ok.");
     println!("Hello, kani!");
+
+    let newbox = Box::new(3);
+    println!("{:?}", newbox);
 
     loop {
         x86_64::instructions::hlt();

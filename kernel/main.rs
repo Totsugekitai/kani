@@ -3,7 +3,11 @@
 #![feature(asm)]
 #![feature(global_asm)]
 #![feature(abi_x86_interrupt)]
+#![feature(alloc_error_handler)]
 
+extern crate alloc;
+
+pub mod allocator;
 pub mod arch;
 pub mod logger;
 pub mod println;
@@ -27,4 +31,9 @@ fn panic(info: &PanicInfo) -> ! {
     println!("===== panic! =====");
     println!("{:?}", info);
     loop {}
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
 }
