@@ -45,8 +45,8 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     let task_a_stack = Box::new([0u8; 0x1000]);
     let task_b_stack = Box::new([0u8; 0x1000]);
 
-    let task_a = Task::new(task_a_fn, task_a_stack.as_ptr() as *const usize);
-    let task_b = Task::new(task_b_fn, task_b_stack.as_ptr() as *const usize);
+    let task_a = Task::new(task_a_fn, task_a_stack.as_ptr() as u64);
+    let task_b = Task::new(task_b_fn, task_b_stack.as_ptr() as u64);
 
     loop {
         x86_64::instructions::hlt();

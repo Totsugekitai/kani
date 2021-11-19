@@ -1,8 +1,7 @@
+use crate::arch::task::ContextX64;
 use crossbeam::queue::ArrayQueue;
 use lazy_static::lazy_static;
 use spin::mutex::Mutex;
-
-use crate::arch::task::ContextX64;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, align(16))]
@@ -15,21 +14,20 @@ const NUM_TASKS: usize = 100;
 
 lazy_static! {
     static ref TASK_QUEUE: ArrayQueue<Task> = ArrayQueue::new(NUM_TASKS);
+    static ref CURRENT_TASK: Mutex<Task> = Mutex::new(Task::empty());
 }
 
-static CURRENT_TASK: Mutex<Task> = Mutex::new(Task::empty());
-
 impl Task {
-    pub fn new(f: fn(), stack: *const usize) -> Self {
+    pub fn new(f: fn(), stack: u64) -> Self {
         Self {
             ctx: ContextX64::new(stack),
             f,
         }
     }
 
-    pub const fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
-            ctx: ContextX64::new(0 as *const usize),
+            ctx: ContextX64::new(0),
             f: Task::empty_fn,
         }
     }
@@ -57,8 +55,8 @@ fn switch_context(current_ctx: &ContextX64, next_ctx: &ContextX64) {}
 
 pub fn switch_task() {
     let current_task = *CURRENT_TASK.lock();
-    let next_task = if let Some(next_task) = select_next_task() {
-        next_task
+    let next_task = if let Some(t) = select_next_task() {
+        t
     } else {
         current_task
     };

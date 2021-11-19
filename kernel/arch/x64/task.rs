@@ -33,9 +33,12 @@ extern "C" {
 }
 
 impl ContextX64 {
-    pub fn new(stack: *const usize) -> Self {
+    pub const fn new(stack: u64) -> Self {
         Self {
-            cr3: 0,
+            cr3: x86_64::registers::control::Cr3::read()
+                .0
+                .start_address()
+                .as_u64(),
             rip: 0,
             rflags: 0,
             reserved: 0,
@@ -49,7 +52,7 @@ impl ContextX64 {
             rdx: 0,
             rdi: 0,
             rsi: 0,
-            rsp: stack as u64,
+            rsp: stack,
             rbp: 0,
             r8: 0,
             r9: 0,
@@ -62,8 +65,11 @@ impl ContextX64 {
             fxsave: [0; 512],
         }
     }
+}
 
-    fn switch_context(&self, next_ctx: &Self) {
-        unsafe { x64_switch_context(self as *const ContextX64, next_ctx as *const ContextX64) }
-    }
+unsafe fn switch_context(current_ctx: &ContextX64, next_ctx: &ContextX64) {
+    x64_switch_context(
+        current_ctx as *const ContextX64,
+        next_ctx as *const ContextX64,
+    )
 }
