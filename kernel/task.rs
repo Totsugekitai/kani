@@ -7,7 +7,6 @@ use spin::mutex::Mutex;
 #[repr(C, align(16))]
 pub struct Task {
     pub ctx: ContextX64,
-    pub f: fn(),
 }
 
 const NUM_TASKS: usize = 100;
@@ -18,25 +17,19 @@ lazy_static! {
 }
 
 impl Task {
-    pub fn new(f: fn(), stack: u64) -> Self {
+    pub fn new(f: u64, stack_bottom: u64) -> Self {
         Self {
-            ctx: ContextX64::new(stack),
-            f,
+            ctx: ContextX64::new(f, stack_bottom),
         }
     }
 
     pub fn empty() -> Self {
         Self {
-            ctx: ContextX64::new(0),
-            f: Task::empty_fn,
+            ctx: ContextX64::new(Task::empty_fn as u64, 0),
         }
     }
 
     fn empty_fn() {}
-
-    pub fn start(&self) {
-        (self.f)();
-    }
 
     pub fn register(self) {
         push_task_queue(self);
@@ -51,16 +44,16 @@ fn select_next_task() -> Option<Task> {
     TASK_QUEUE.pop()
 }
 
-fn switch_context(current_ctx: &ContextX64, next_ctx: &ContextX64) {}
+pub fn switch_task(current_task: &Task, next_task: &Task) {
+    // let current_task = *CURRENT_TASK.lock();
+    // let next_task = if let Some(t) = select_next_task() {
+    //     t
+    // } else {
+    //     current_task
+    // };
+    // push_task_queue(current_task);
 
-pub fn switch_task() {
-    let current_task = *CURRENT_TASK.lock();
-    let next_task = if let Some(t) = select_next_task() {
-        t
-    } else {
-        current_task
-    };
-    push_task_queue(current_task);
-
-    switch_context(&current_task.ctx, &next_task.ctx);
+    unsafe {
+        crate::arch::x64::task::switch_context(&current_task.ctx, &next_task.ctx);
+    }
 }

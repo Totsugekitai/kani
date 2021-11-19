@@ -1,3 +1,5 @@
+use x86_64::instructions::segmentation::Segment;
+
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct ContextX64 {
@@ -29,21 +31,21 @@ pub struct ContextX64 {
 }
 
 extern "C" {
-    fn x64_switch_context(prev_ctx: *const ContextX64, next_ctx: *const ContextX64);
+    fn x64_switch_context(next_ctx: *const ContextX64, prev_ctx: *const ContextX64);
 }
 
 impl ContextX64 {
-    pub const fn new(stack: u64) -> Self {
-        Self {
+    pub fn new(f: u64, stack_bottom: u64) -> Self {
+        let mut ctx = Self {
             cr3: x86_64::registers::control::Cr3::read()
                 .0
                 .start_address()
                 .as_u64(),
-            rip: 0,
-            rflags: 0,
+            rip: f,
+            rflags: 0x202, // from osbook_day13
             reserved: 0,
-            cs: 0,
-            ss: 0,
+            cs: x86_64::registers::segmentation::CS::get_reg().0 as u64,
+            ss: x86_64::registers::segmentation::SS::get_reg().0 as u64,
             fs: 0,
             gs: 0,
             rax: 0,
@@ -52,7 +54,7 @@ impl ContextX64 {
             rdx: 0,
             rdi: 0,
             rsi: 0,
-            rsp: stack,
+            rsp: (stack_bottom & 0xffff_ffff_ffff_fff0) - 8,
             rbp: 0,
             r8: 0,
             r9: 0,
@@ -63,13 +65,16 @@ impl ContextX64 {
             r14: 0,
             r15: 0,
             fxsave: [0; 512],
-        }
+        };
+        ctx.fxsave[24] = 0x80;
+        ctx.fxsave[24] = 0x1f;
+        ctx
     }
 }
 
-unsafe fn switch_context(current_ctx: &ContextX64, next_ctx: &ContextX64) {
+pub unsafe fn switch_context(current_ctx: &ContextX64, next_ctx: &ContextX64) {
     x64_switch_context(
-        current_ctx as *const ContextX64,
         next_ctx as *const ContextX64,
+        current_ctx as *const ContextX64,
     )
 }
