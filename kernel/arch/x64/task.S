@@ -29,7 +29,7 @@ x64_switch_context:     # fn x64_switch_context(prev_rsp: *const u64, next_rsp: 
     mov     rax, [rsp]
     mov     [rsi + 0x08], rax   # rip
     pushfq
-    pop qword   [rsi + 0x10]    # rflags
+    pop qword ptr   [rsi + 0x10]    # rflags
     # save segment registers
     mov     ax, cs
     mov     [rsi + 0x20], rax
@@ -42,11 +42,11 @@ x64_switch_context:     # fn x64_switch_context(prev_rsp: *const u64, next_rsp: 
     # save xmm registers
     fxsave  [rsi + 0xc0]
     # prepare stack frame for iretq
-    push qword  [rdi + 0x28]    # ss
-    push qword  [rdi + 0x70]    # rsp
-    push qword  [rdi + 0x10]    # rflags
-    push qword  [rdi + 0x20]    # cs
-    push qword  [rdi + 0x08]    # rip
+    push qword ptr  [rdi + 0x28]    # ss
+    push qword ptr  [rdi + 0x70]    # rsp
+    push qword ptr  [rdi + 0x10]    # rflags
+    push qword ptr  [rdi + 0x20]    # cs
+    push qword ptr  [rdi + 0x08]    # rip
 
     # ===== load context =====
     # load xmm registers

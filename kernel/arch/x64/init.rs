@@ -1,5 +1,5 @@
 use super::{gdt, interrupts, lapic, multiboot2, uart};
-use crate::{allocator, arch::task::ContextX64, logger, println, task};
+use crate::{allocator, logger, println, task::Task};
 use alloc::boxed::Box;
 use log::{debug, info};
 use x86_64::structures::paging::Translate;
@@ -45,8 +45,8 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     let task_a_stack = Box::new([0u8; 0x1000]);
     let task_b_stack = Box::new([0u8; 0x1000]);
 
-    let task_a = task::Task::<ContextX64>::new();
-    let task_b = task::Task::<ContextX64>::new();
+    let task_a = Task::new(task_a_fn, task_a_stack.as_ptr() as *const usize);
+    let task_b = Task::new(task_b_fn, task_b_stack.as_ptr() as *const usize);
 
     loop {
         x86_64::instructions::hlt();

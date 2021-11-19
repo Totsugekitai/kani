@@ -1,5 +1,3 @@
-use crate::task::Context;
-
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct ContextX64 {
@@ -34,8 +32,8 @@ extern "C" {
     fn x64_switch_context(prev_ctx: *const ContextX64, next_ctx: *const ContextX64);
 }
 
-impl Context<Self> for ContextX64 {
-    fn new() -> Self {
+impl ContextX64 {
+    pub fn new(stack: *const usize) -> Self {
         Self {
             cr3: 0,
             rip: 0,
@@ -51,7 +49,7 @@ impl Context<Self> for ContextX64 {
             rdx: 0,
             rdi: 0,
             rsi: 0,
-            rsp: 0,
+            rsp: stack as u64,
             rbp: 0,
             r8: 0,
             r9: 0,
@@ -64,6 +62,7 @@ impl Context<Self> for ContextX64 {
             fxsave: [0; 512],
         }
     }
+
     fn switch_context(&self, next_ctx: &Self) {
         unsafe { x64_switch_context(self as *const ContextX64, next_ctx as *const ContextX64) }
     }
