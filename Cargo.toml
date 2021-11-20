@@ -1,7 +1,5 @@
 [workspace]
-members = [
-    "kernel",
-]
+members = [ "kernel" ]
 
 [profile.release]
 opt-level = 3
