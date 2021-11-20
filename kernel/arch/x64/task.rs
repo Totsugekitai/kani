@@ -54,7 +54,7 @@ impl ContextX64 {
             rdx: 0,
             rdi: 0,
             rsi: 0,
-            rsp: (stack_bottom & 0xffff_ffff_ffff_fff0) - 8,
+            rsp: (stack_bottom & 0xffff_ffff_ffff_fff0) - 8, // from osbook_day13
             rbp: 0,
             r8: 0,
             r9: 0,

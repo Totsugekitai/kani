@@ -23,27 +23,27 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static>
     OffsetPageTable::new(level_4_table, physical_memory_offset)
 }
 
-#[derive(Debug)]
-pub struct FrameAllocator {
-    next: usize,
-}
-
 extern "C" {
     static __kernel_image: u8;
     static __kernel_image_end: u8;
 }
 
-impl FrameAllocator {
-    pub fn init() -> Self {
-        FrameAllocator { next: 0 }
-    }
-}
+// #[derive(Debug)]
+// pub struct FrameAllocator {
+//     next: usize,
+// }
 
-unsafe impl x86_64::structures::paging::FrameAllocator<Size4KiB> for FrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
-        None
-    }
-}
+// impl FrameAllocator {
+//     pub fn init() -> Self {
+//         FrameAllocator { next: 0 }
+//     }
+// }
+
+// unsafe impl x86_64::structures::paging::FrameAllocator<Size4KiB> for FrameAllocator {
+//     fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
+//         None
+//     }
+// }
 
 /// 与えられたページを`0xb8000`が含まれているフレームにマップする
 pub fn create_example_mapping(

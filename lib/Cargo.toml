@@ -1,12 +1,12 @@
 [package]
-name = "kani"
+name = "kani_lib"
 version = "0.0.1"
 authors = ["Totsugekitai <37617413+Totsugekitai@users.noreply.github.com>"]
 edition = "2021"
 
-[[bin]]
-name = "kani"
-path = "main.rs"
+[lib]
+name = "kani_lib"
+path = "lib.rs"
 
 [dependencies]
 log = "0.4"
@@ -18,8 +18,6 @@ linked_list_allocator = "0.9.0"
 crossbeam = { version = "0.8.1", default-features = false, features = [
     "alloc",
 ] }
-
-kani_lib = { path = "../lib" }
 
 [features]
 qemu = []
