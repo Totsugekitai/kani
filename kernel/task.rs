@@ -1,7 +1,9 @@
+use core::borrow::Borrow;
+
 use crate::arch::task::ContextX64;
-use core::sync::atomic::AtomicU64;
 use kani_lib::linked_list::LinkedList;
 use lazy_static::lazy_static;
+use spin::mutex::Mutex;
 
 #[cfg(target_arch = "x86_64")]
 #[derive(Debug, Clone, Copy)]
@@ -37,8 +39,18 @@ impl Task {
 
 lazy_static! {
     pub static ref IDLE_TASK: Task = Task::make_idle_task();
-    static ref CURRENT_TASK_INDEX: AtomicU64 = AtomicU64::new(0);
+    static ref CURRENT_TASK: Mutex<Task> = Mutex::new(*IDLE_TASK);
     static ref TASK_LIST: LinkedList<Task> = LinkedList::new();
+}
+
+pub fn switch_next_task() {
+    match TASK_LIST.pop_front() {
+        Some(next_task) => {
+            TASK_LIST.push_back(*CURRENT_TASK.lock());
+            switch_task(&TASK_LIST.tail, &next_task);
+        }
+        None => {}
+    }
 }
 
 pub fn switch_task(current_task: &Task, next_task: &Task) {
