@@ -1,76 +1,93 @@
 use alloc::sync::Arc;
+use spin::Mutex;
 
 #[derive(Debug)]
-pub struct List<T> {
+pub struct LinkedList<T> {
     head: Link<T>,
+    tail: Link<T>,
 }
 
-type Link<T> = Option<Arc<Node<T>>>;
+type Link<T> = Option<Arc<Mutex<Node<T>>>>;
 
 #[derive(Debug)]
 struct Node<T> {
     elem: T,
     next: Link<T>,
+    prev: Link<T>,
 }
 
-impl<T> List<T> {
+impl<T> Node<T> {
+    fn new(elem: T) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Node {
+            elem,
+            next: None,
+            prev: None,
+        }))
+    }
+}
+
+impl<T> LinkedList<T> {
     pub fn new() -> Self {
-        List { head: None }
-    }
-
-    /// return List to which elem added
-    pub fn prepend(&self, elem: T) -> List<T> {
-        List {
-            head: Some(Arc::new(Node {
-                elem,
-                next: self.head.clone(),
-            })),
+        Self {
+            head: None,
+            tail: None,
         }
     }
 
-    /// return List from which tail element removed
-    pub fn tail(&self) -> List<T> {
-        List {
-            head: self.head.as_ref().and_then(|node| node.next.clone()),
+    pub fn push_back(&mut self, elem: T) {
+        let new_tail = Node::new(elem);
+        match self.tail.take() {
+            Some(old_tail) => {
+                old_tail.lock().next = Some(new_tail.clone());
+                new_tail.lock().prev = Some(old_tail);
+                self.tail = Some(new_tail);
+            }
+            None => {
+                self.head = Some(new_tail.clone());
+                self.tail = Some(new_tail);
+            }
         }
     }
 
-    /// return head reference
-    pub fn head(&self) -> Option<&T> {
-        self.head.as_ref().map(|node| &node.elem)
+    pub fn pop_back(&mut self) -> Option<T> {
+        self.tail.take().map(|old_tail| {
+            match old_tail.lock().prev.take() {
+                Some(new_tail) => {
+                    new_tail.lock().next.take();
+                    self.tail = Some(new_tail);
+                }
+                None => {
+                    self.head.take();
+                }
+            }
+            Arc::try_unwrap(old_tail).ok().unwrap().into_inner().elem
+        })
     }
 
-    /// return iterator
-    pub fn iter(&self) -> Iter<'_, T> {
-        Iter {
-            next: self.head.as_deref(),
-        }
-    }
-}
-
-impl<T> Drop for List<T> {
-    fn drop(&mut self) {
-        let mut head = self.head.take();
-        while let Some(node) = head {
-            if let Ok(mut node) = Arc::try_unwrap(node) {
-                head = node.next.take();
+    pub fn remove(&mut self, index: usize) {
+        let mut remove_node = self.head.take();
+        for _ in 0..index {
+            if let Some(node) = remove_node {
+                remove_node = node.lock().next.clone();
             } else {
                 break;
+            }
+        }
+        if let Some(node) = remove_node {
+            let prev = node.lock().prev.clone();
+            if let Some(prev) = prev {
+                prev.lock().next = node.lock().next.clone();
+            }
+            let next = node.lock().next.clone();
+            if let Some(next) = next {
+                next.lock().prev = node.lock().prev.clone();
             }
         }
     }
 }
 
-pub struct Iter<'a, T> {
-    next: Option<&'a Node<T>>,
-}
-
-impl<'a, T> Iterator for Iter<'a, T> {
-    type Item = &'a T;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.next.map(|node| {
-            self.next = node.next.as_deref();
-            &node.elem
-        })
+impl<T> Drop for LinkedList<T> {
+    fn drop(&mut self) {
+        while self.pop_back().is_some() {}
     }
 }

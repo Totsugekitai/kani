@@ -1,7 +1,7 @@
 use super::{gdt, interrupts, lapic, multiboot2, uart};
 use crate::{
     allocator, logger, println,
-    task::{switch_task, Task},
+    task::{switch_task, Task, IDLE_TASK},
 };
 use alloc::boxed::Box;
 use lazy_static::lazy_static;
@@ -46,12 +46,8 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     info!("boot ok.");
     println!("Hello, kani!");
 
-    let dummy_task = Task::new(
-        x86_64::instructions::hlt as u64,
-        TASK_A_STACK.as_ptr() as u64 + 0x1000,
-    );
+    switch_task(&IDLE_TASK, &TASK_A);
 
-    switch_task(&dummy_task, &TASK_A);
     loop {
         x86_64::instructions::hlt();
     }
@@ -65,15 +61,11 @@ lazy_static! {
 }
 
 fn task_a_fn() {
-    loop {
-        println!("Task A is running...");
-        crate::task::switch_task(&TASK_A, &TASK_B);
-    }
+    println!("Task A is running...");
+    crate::task::switch_task(&TASK_A, &TASK_B);
 }
 
 fn task_b_fn() {
-    loop {
-        println!("Task B is running...");
-        crate::task::switch_task(&TASK_B, &TASK_A);
-    }
+    println!("Task B is running...");
+    crate::task::switch_task(&TASK_B, &TASK_A);
 }
