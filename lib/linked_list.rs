@@ -1,5 +1,5 @@
-use alloc::sync::Arc;
-use spin::Mutex;
+use alloc::rc::Rc;
+use core::cell::{Ref, RefCell, RefMut};
 
 #[derive(Debug)]
 pub struct LinkedList<T> {
@@ -7,18 +7,18 @@ pub struct LinkedList<T> {
     pub tail: Link<T>,
 }
 
-type Link<T> = Option<Arc<Mutex<Node<T>>>>;
+type Link<T> = Option<Rc<RefCell<Node<T>>>>;
 
 #[derive(Debug)]
 pub struct Node<T> {
-    elem: T,
+    pub elem: T,
     next: Link<T>,
     prev: Link<T>,
 }
 
 impl<T> Node<T> {
-    fn new(elem: T) -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Node {
+    fn new(elem: T) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Node {
             elem,
             next: None,
             prev: None,
@@ -38,8 +38,8 @@ impl<T> LinkedList<T> {
         let new_tail = Node::new(elem);
         match self.tail.take() {
             Some(old_tail) => {
-                old_tail.lock().next = Some(new_tail.clone());
-                new_tail.lock().prev = Some(old_tail);
+                old_tail.borrow_mut().next = Some(new_tail.clone());
+                new_tail.borrow_mut().prev = Some(old_tail);
                 self.tail = Some(new_tail);
             }
             None => {
@@ -51,17 +51,29 @@ impl<T> LinkedList<T> {
 
     pub fn pop_front(&mut self) -> Option<T> {
         self.head.take().map(|old_head| {
-            match old_head.lock().next.take() {
+            match old_head.borrow_mut().next.take() {
                 Some(new_head) => {
-                    new_head.lock().prev.take();
+                    new_head.borrow_mut().prev.take();
                     self.head = Some(new_head);
                 }
                 None => {
                     self.tail.take();
                 }
             }
-            Arc::try_unwrap(old_head).ok().unwrap().into_inner().elem
+            Rc::try_unwrap(old_head).ok().unwrap().into_inner().elem
         })
+    }
+
+    pub fn peek_back(&self) -> Option<Ref<T>> {
+        self.tail
+            .as_ref()
+            .map(|node| Ref::map(node.borrow(), |node| &node.elem))
+    }
+
+    pub fn peek_back_mut(&mut self) -> Option<RefMut<T>> {
+        self.tail
+            .as_ref()
+            .map(|node| RefMut::map(node.borrow_mut(), |node| &mut node.elem))
     }
 }
 

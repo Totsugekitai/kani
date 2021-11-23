@@ -1,8 +1,5 @@
 use super::{gdt, interrupts, lapic, multiboot2, uart};
-use crate::{
-    allocator, logger, println,
-    task::{switch_task, Task, IDLE_TASK},
-};
+use crate::{allocator, logger, println, task::Task};
 use alloc::boxed::Box;
 use lazy_static::lazy_static;
 use log::{debug, info};
@@ -46,26 +43,29 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     info!("boot ok.");
     println!("Hello, kani!");
 
-    switch_task(&IDLE_TASK, &TASK_A);
+    let mut task_a_stack: Box<[u8; 0x1000]> = Box::new([0u8; 0x1000]);
+    let mut task_b_stack: Box<[u8; 0x1000]> = Box::new([0u8; 0x1000]);
+    let task_a = Task::new(task_a_fn as u64, task_a_stack.as_mut_ptr() as u64 + 0x1000);
+    let task_b = Task::new(task_b_fn as u64, task_b_stack.as_mut_ptr() as u64 + 0x1000);
+
+    task_a.register();
+    task_b.register();
 
     loop {
         x86_64::instructions::hlt();
     }
 }
 
-lazy_static! {
-    static ref TASK_A_STACK: Box<[u8; 0x1000]> = Box::new([0u8; 0x1000]);
-    static ref TASK_B_STACK: Box<[u8; 0x1000]> = Box::new([0u8; 0x1000]);
-    static ref TASK_A: Task = Task::new(task_a_fn as u64, TASK_A_STACK.as_ptr() as u64 + 0x1000);
-    static ref TASK_B: Task = Task::new(task_b_fn as u64, TASK_B_STACK.as_ptr() as u64 + 0x1000);
-}
+lazy_static! {}
 
 fn task_a_fn() {
-    println!("Task A is running...");
-    crate::task::switch_task(&TASK_A, &TASK_B);
+    loop {
+        //print!("A");
+    }
 }
 
 fn task_b_fn() {
-    println!("Task B is running...");
-    crate::task::switch_task(&TASK_B, &TASK_A);
+    loop {
+        //print!("B");
+    }
 }

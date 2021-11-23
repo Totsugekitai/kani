@@ -2,7 +2,7 @@
 .text
 
 .global x64_switch_context
-x64_switch_context:     # fn x64_switch_context(prev_rsp: *const u64, next_rsp: *const u64);
+x64_switch_context:     # fn x64_switch_context(next_ctx: *const u64, current_ctx: *const u64);
     # ===== save context =====
     # save general registers
     mov     [rsi + 0x40], rax
