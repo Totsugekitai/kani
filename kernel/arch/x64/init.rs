@@ -1,7 +1,8 @@
 use super::{gdt, interrupts, lapic, multiboot2, uart};
-use crate::{allocator, logger, println, task::Task};
-use alloc::boxed::Box;
-use lazy_static::lazy_static;
+use crate::{
+    allocator, logger, println,
+    task::{executor::Executor, Task},
+};
 use log::{debug, info};
 use x86_64::structures::paging::Translate;
 
@@ -43,29 +44,21 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     info!("boot ok.");
     println!("Hello, kani!");
 
-    let mut task_a_stack: Box<[u8; 0x1000]> = Box::new([0u8; 0x1000]);
-    let mut task_b_stack: Box<[u8; 0x1000]> = Box::new([0u8; 0x1000]);
-    let task_a = Task::new(task_a_fn as u64, task_a_stack.as_mut_ptr() as u64 + 0x1000);
-    let task_b = Task::new(task_b_fn as u64, task_b_stack.as_mut_ptr() as u64 + 0x1000);
-
-    task_a.register();
-    task_b.register();
+    let mut executor = Executor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(crate::task::uart::print_keypresses()));
+    executor.run();
 
     loop {
         x86_64::instructions::hlt();
     }
 }
 
-lazy_static! {}
-
-fn task_a_fn() {
-    loop {
-        //print!("A");
-    }
+async fn async_number() -> u32 {
+    42
 }
 
-fn task_b_fn() {
-    loop {
-        //print!("B");
-    }
+async fn example_task() {
+    let number = async_number().await;
+    println!("async number: {}", number);
 }

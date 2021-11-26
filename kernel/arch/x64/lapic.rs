@@ -1,5 +1,4 @@
 use super::interrupts::InterruptIndex;
-use crate::task::{switch_next_task, TASK_INTERVAL};
 use log::{info, trace};
 use spin::rwlock::RwLock;
 use x86_64::structures::idt::InterruptStackFrame;
@@ -41,20 +40,13 @@ pub mod tick {
 }
 
 pub extern "x86-interrupt" fn lapic_handler(_: InterruptStackFrame) {
-    let mut task_switch_flag = false;
     x86_64::instructions::interrupts::without_interrupts(|| {
         {
             let mut tick = TICK.write();
             *tick += 1;
         }
-        if *TICK.read() % TASK_INTERVAL == 0 {
-            task_switch_flag = true;
-        }
         unsafe {
             super::interrupts::notify_end_of_interrupt();
-        }
-        if task_switch_flag {
-            switch_next_task();
         }
     });
     trace!("LAPIC interrupt. Tick: {}", tick::get());

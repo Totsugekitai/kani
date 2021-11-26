@@ -1,5 +1,4 @@
 use crate::arch::x64::ioapic;
-use crate::{print, println};
 use core::fmt::Write;
 use log::info;
 use spin::mutex::Mutex;
@@ -117,13 +116,12 @@ pub extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
     interrupts::disable();
     unsafe {
         let c = UART.lock().read();
+        crate::task::uart::add_ascii(c);
         super::interrupts::notify_end_of_interrupt();
         interrupts::enable();
-        if c == b'\r' {
-            println!("");
-        } else {
-            print!("{}", c as char);
-        }
+
+        use crate::print;
+        print!("{}", c as char);
     }
 }
 
