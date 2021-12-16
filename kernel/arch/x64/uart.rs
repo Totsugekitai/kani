@@ -115,13 +115,13 @@ pub extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
     use x86_64::instructions::interrupts;
     interrupts::disable();
     unsafe {
-        let c = UART.lock().read();
+        let mut c = UART.lock().read();
+        if c as char == '\r' {
+            c = '\n' as u8;
+        }
         crate::task::uart::add_ascii(c);
         super::interrupts::notify_end_of_interrupt();
         interrupts::enable();
-
-        use crate::print;
-        print!("{}", c as char);
     }
 }
 

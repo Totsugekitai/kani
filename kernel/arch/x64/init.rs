@@ -45,20 +45,10 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     println!("Hello, kani!");
 
     let mut executor = Executor::new();
-    executor.spawn(Task::new(example_task()));
     executor.spawn(Task::new(crate::task::uart::print_keypresses()));
     executor.run();
 
     loop {
         x86_64::instructions::hlt();
     }
-}
-
-async fn async_number() -> u32 {
-    42
-}
-
-async fn example_task() {
-    let number = async_number().await;
-    println!("async number: {}", number);
 }
