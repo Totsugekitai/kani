@@ -1,7 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(asm)]
-#![feature(global_asm)]
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(linked_list_cursors)]

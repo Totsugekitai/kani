@@ -1,4 +1,5 @@
 use crate::arch::x64::ioapic;
+use core::arch::asm;
 use core::fmt::Write;
 use log::info;
 use spin::mutex::Mutex;
