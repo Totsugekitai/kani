@@ -6,7 +6,7 @@ use core::{
 };
 use crossbeam::queue::ArrayQueue;
 use futures_util::{stream::Stream, task::AtomicWaker, StreamExt};
-use log::{debug, warn};
+use log::warn;
 
 static ASCII_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static WAKER: AtomicWaker = AtomicWaker::new();

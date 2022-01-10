@@ -1,10 +1,9 @@
 use crate::arch::x64::ioapic;
 use crate::print;
 use alloc::sync::Arc;
-use core::arch::asm;
 use core::fmt::Write;
 use lazy_static::lazy_static;
-use log::{debug, info, trace};
+use log::{debug, info};
 use spin::mutex::Mutex;
 use x86_64::instructions::port::{PortGeneric, ReadOnlyAccess, WriteOnlyAccess};
 use x86_64::structures::idt::InterruptStackFrame;
