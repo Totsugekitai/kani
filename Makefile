@@ -65,7 +65,7 @@ debug-run:
 
 .PHONY: debug-attach
 debug-attach:
-> gdb -ex 'file ./target/x64/debug/kani' -ex 'target remote localhost:12345' 
+> gdb -ex 'file ./target/x64/$(build_mode)/kani' -ex 'target remote localhost:12345' 
 
 .PHONY: all
 all: build-kernel build-iso run

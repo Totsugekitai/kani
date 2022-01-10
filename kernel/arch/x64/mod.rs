@@ -11,5 +11,6 @@ pub mod ioapic;
 pub mod lapic;
 pub mod multiboot2;
 pub mod paging;
+pub mod process;
 pub mod task;
 pub mod uart;

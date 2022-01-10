@@ -1,7 +1,7 @@
 use super::gdt;
 use crate::println;
 use lazy_static::lazy_static;
-use log::info;
+use log::{debug, info};
 use x86_64::structures::idt::*;
 
 lazy_static! {
@@ -29,6 +29,11 @@ lazy_static! {
 
         idt
     };
+}
+
+#[allow(unused)]
+extern "x86-interrupt" fn empty_handler(_: InterruptStackFrame) {
+    debug!("empty!");
 }
 
 pub fn init() {

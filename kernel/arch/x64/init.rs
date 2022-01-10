@@ -10,6 +10,7 @@ const INIT_PAGING_PHYS_MEM_OFFSET: u64 = 0;
 
 #[no_mangle]
 pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize) {
+    allocator::init();
     let _ = logger::init();
     uart::init();
     gdt::init();
@@ -39,16 +40,20 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
         }
     }
 
-    allocator::init();
-
     info!("boot ok.");
     println!("Hello, kani!");
 
     let mut executor = Executor::new();
+    executor.spawn(Task::new(sample_task()));
     executor.spawn(Task::new(crate::task::uart::print_keypresses()));
     executor.run();
+}
 
-    loop {
-        x86_64::instructions::hlt();
-    }
+async fn sample() -> usize {
+    42
+}
+
+async fn sample_task() {
+    let num = sample().await;
+    println!("num {}", num);
 }

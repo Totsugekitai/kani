@@ -1,7 +1,10 @@
 use crate::arch::x64::ioapic;
+use crate::print;
+use alloc::sync::Arc;
 use core::arch::asm;
 use core::fmt::Write;
-use log::info;
+use lazy_static::lazy_static;
+use log::{debug, info, trace};
 use spin::mutex::Mutex;
 use x86_64::instructions::port::{PortGeneric, ReadOnlyAccess, WriteOnlyAccess};
 use x86_64::structures::idt::InterruptStackFrame;
@@ -14,7 +17,9 @@ pub const COM4: u16 = 0x2e8;
 const IRQ_COM1: u32 = 4;
 const IRQ_COM2: u32 = 3;
 
-pub static UART: Mutex<Uart> = Mutex::new(Uart::new(COM1));
+lazy_static! {
+    pub static ref UART: Arc<Mutex<Uart>> = Arc::new(Mutex::new(Uart::new(COM1)));
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Uart {
@@ -30,18 +35,18 @@ impl Uart {
     pub const fn new(com: u16) -> Self {
         Uart { com }
     }
-    pub unsafe fn init(self) -> Result<(), UartErrorKind> {
+    pub unsafe fn init(&self) -> Result<(), UartErrorKind> {
         // 8259 PIC Disable
         PortGeneric::<u8, WriteOnlyAccess>::new(0xa1).write(0xff);
         PortGeneric::<u8, WriteOnlyAccess>::new(0x21).write(0xff);
         // 16550A UART Enable
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0);
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 3).write(0x80);
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0); // disable all interrupts
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 3).write(0x80); // DLAB set 1
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(1); // 115200 / 115200
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0);
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 3).write(0x03);
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 4).write(0x0b);
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0x01);
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0); // baud rate hi bytes
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 3).write(0x03); // DLAB set 0
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 4).write(0x0b); // IRQ enable
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0x01); // interrupt enable
 
         if PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() == 0xff {
             return Err(UartErrorKind::NotImplement);
@@ -69,7 +74,7 @@ impl Uart {
     #[cfg(not(feature = "qemu"))]
     pub unsafe fn write(self, c: u8) {
         while PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() & 0x20 != 0x20 {
-            asm!("nop");
+            x86_64::instructions::hlt();
         }
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(c);
     }
@@ -82,7 +87,7 @@ impl Uart {
     #[cfg(not(feature = "qemu"))]
     pub unsafe fn read(self) -> u8 {
         while PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() & 1 != 1 {
-            asm!("nop");
+            x86_64::instructions::hlt();
         }
 
         PortGeneric::<u16, ReadOnlyAccess>::new(self.com).read() as u8
@@ -99,34 +104,35 @@ impl Write for Uart {
 }
 
 pub unsafe fn init() {
-    match UART.lock().init() {
-        Ok(()) => (),
-        Err(e) => match e {
-            UartErrorKind::InvalidParams => {
-                panic!();
-            }
-            UartErrorKind::NotImplement => (), // FIXME: correct error handling
-        },
+    {
+        match UART.lock().init() {
+            Ok(()) => (),
+            Err(e) => match e {
+                UartErrorKind::InvalidParams => {
+                    panic!();
+                }
+                UartErrorKind::NotImplement => (), // FIXME: correct error handling
+            },
+        }
     }
     remove_screen();
     info!("init UART");
 }
 
 pub extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
-    use x86_64::instructions::interrupts;
-    interrupts::disable();
-    unsafe {
+    x86_64::instructions::interrupts::without_interrupts(|| unsafe {
         let mut c = UART.lock().read();
         if c as char == '\r' {
             c = '\n' as u8;
         }
         crate::task::uart::add_ascii(c);
         super::interrupts::notify_end_of_interrupt();
-        interrupts::enable();
-    }
+    });
+    debug!("UART interrupt.");
 }
 
 pub fn remove_screen() {
-    let mut uart = UART.lock();
-    let _ = uart.write_str("\x1b[2J\x1b[1;1H");
+    // let mut uart = UART.lock();
+    // let _ = uart.write_str("\x1b[2J\x1b[1;1H");
+    print!("\x1b[2J\x1b[1;1H");
 }

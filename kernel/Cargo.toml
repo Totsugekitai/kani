@@ -19,7 +19,10 @@ crossbeam = { version = "0.8.1", default-features = false, features = [
     "alloc",
 ] }
 conquer-once = { version = "0.2.0", default-features = false }
-futures-util = { version = "0.3.4", default-features = false, features = ["alloc"] }
+futures-util = { version = "0.3.4", default-features = false, features = [
+    "alloc",
+] }
+bitvec = { version = "0.22", default-features = false }
 
 [features]
 qemu = []
