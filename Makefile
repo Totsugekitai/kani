@@ -7,6 +7,7 @@ MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 
 export RELEASE ?=
 export QEMU ?=
+export QEMU_SYSTEM ?= qemu-system-x86_64
 export LOG ?= info
 export ARCH ?= x64
 
@@ -57,11 +58,11 @@ QEMUFLAGS += -cdrom kani.iso -serial stdio
 
 .PHONY: run
 run:
-> qemu-system-x86_64 $(QEMUFLAGS)
+> $(QEMU_SYSTEM) $(QEMUFLAGS)
 
 .PHONY: debug-run
 debug-run:
-> qemu-system-x86_64 $(QEMUFLAGS) -no-shutdown -no-reboot -monitor telnet::1234,server,nowait -gdb tcp::12345 -S #-d int 
+> $(QEMU_SYSTEM) $(QEMUFLAGS) -no-shutdown -no-reboot -monitor telnet::1234,server,nowait -gdb tcp::12345 -S #-d int
 
 .PHONY: debug-attach
 debug-attach:
