@@ -1,4 +1,5 @@
 use arrayvec::ArrayVec;
+use core::ptr;
 use lazy_static::lazy_static;
 use log::{debug, info};
 use spin::mutex::Mutex;
@@ -151,7 +152,6 @@ fn is_magic_correct(magic: u32) -> bool {
 }
 
 /// multiboot2 information headerのtypeによって処理を振り分ける関数
-#[allow(unaligned_references)]
 unsafe fn process_info(addr: usize) {
     let mut boot_info = BootInfo {
         memory_map: ArrayVec::new(),
@@ -165,7 +165,9 @@ unsafe fn process_info(addr: usize) {
         let tag = tag_ptr.as_ref().unwrap();
         debug!(
             "tag_base: 0x{:x}, tag type: {}, tag size: 0x{:x}",
-            tag_ptr as usize, tag.info_type, tag.size
+            tag_ptr as usize,
+            ptr::read_unaligned(ptr::addr_of!(tag.info_type)),
+            ptr::read_unaligned(ptr::addr_of!(tag.size))
         );
         match tag.info_type {
             InfoType::MemoryMap => {
@@ -180,13 +182,17 @@ unsafe fn process_info(addr: usize) {
             InfoType::Terminate => {
                 debug!(
                     "Terminate tag found: info_type={}, size=0x{:x}",
-                    tag.info_type, tag.size
+                    ptr::read_unaligned(ptr::addr_of!(tag.info_type)),
+                    ptr::read_unaligned(ptr::addr_of!(tag.size))
                 );
                 break;
             }
             _ => {
                 if tag.info_type as u32 > 21 {
-                    panic!("unknown type of multiboot2 information: {}", tag.info_type);
+                    panic!(
+                        "unknown type of multiboot2 information: {}",
+                        ptr::read_unaligned(ptr::addr_of!(tag.info_type))
+                    );
                 }
             }
         }
@@ -202,7 +208,6 @@ unsafe fn process_info(addr: usize) {
 }
 
 /// multibootから渡されてきたメモリマップをパースする関数
-#[allow(unaligned_references)]
 unsafe fn parse_memory_map(ptr: *const MemoryMapEntry, n: u32) -> BootInfo {
     let mut boot_info = BootInfo {
         memory_map: ArrayVec::new(),
@@ -213,7 +218,10 @@ unsafe fn parse_memory_map(ptr: *const MemoryMapEntry, n: u32) -> BootInfo {
         let entry = entry_ptr.as_ref().unwrap();
         debug!(
             "Memory Map {}: base_addr=0x{:x}, len=0x{:x}, type={}",
-            i, entry.base_addr, entry.length, entry.entry_type
+            i,
+            ptr::read_unaligned(ptr::addr_of!(entry.base_addr)),
+            ptr::read_unaligned(ptr::addr_of!(entry.length)),
+            ptr::read_unaligned(ptr::addr_of!(entry.entry_type))
         );
         if let MemoryMapType::Available = entry.entry_type {
             boot_info.memory_map.push(entry.clone());
