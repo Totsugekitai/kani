@@ -32,13 +32,13 @@ jobs:
       - uses: ./.github/actions/cache_cargo
       - name: clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
-  test:
-    runs-on: ubuntu-latest
-    env:
-      RUSTC_FORCE_INCREMENTAL: 1
-    needs: build
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/cache_cargo
-      - name: test
-        #run: cargo test --all -- --nocapture
+  # test:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     RUSTC_FORCE_INCREMENTAL: 1
+  #   needs: build
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: ./.github/actions/cache_cargo
+  #     - name: test
+  #       run: cargo test --all -- --nocapture
