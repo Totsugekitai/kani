@@ -19,7 +19,7 @@ crossbeam = { version = "0.8.1", default-features = false, features = [
     "alloc",
 ] }
 conquer-once = { version = "0.3.2", default-features = false }
-futures-util = { version = "0.3.4", default-features = false, features = [
+futures-util = { version = "0.3.21", default-features = false, features = [
     "alloc",
 ] }
 bitvec = { version = "0.22", default-features = false }
