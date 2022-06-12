@@ -41,7 +41,7 @@ impl Uart {
         // 16550A UART Enable
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0); // disable all interrupts
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 3).write(0x80); // DLAB set 1
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(1); // 115200 / 115200
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com).write(1); // 115200 / 115200
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 1).write(0); // baud rate hi bytes
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 3).write(0x03); // DLAB set 0
         PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 4).write(0x0b); // IRQ enable
@@ -52,7 +52,7 @@ impl Uart {
         }
 
         PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 2).read();
-        PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 0).read();
+        PortGeneric::<u16, ReadOnlyAccess>::new(self.com).read();
 
         if self.com == COM1 || self.com == COM3 {
             ioapic::enable(IRQ_COM1, 0);
@@ -75,7 +75,7 @@ impl Uart {
         while PortGeneric::<u16, ReadOnlyAccess>::new(self.com + 5).read() & 0x20 != 0x20 {
             x86_64::instructions::hlt();
         }
-        PortGeneric::<u8, WriteOnlyAccess>::new(self.com + 0).write(c);
+        PortGeneric::<u8, WriteOnlyAccess>::new(self.com).write(c);
     }
 
     #[cfg(feature = "qemu")]
@@ -122,10 +122,10 @@ pub extern "x86-interrupt" fn uart_handler(_: InterruptStackFrame) {
     x86_64::instructions::interrupts::without_interrupts(|| unsafe {
         let mut c = UART.lock().read();
         if c as char == '\r' {
-            c = '\n' as u8;
+            c = b'\n';
         }
-        crate::task::uart::add_ascii(c);
-        super::interrupts::notify_end_of_interrupt();
+        // crate::task::uart::add_ascii(c);
+        print!("{}", c as char);
     });
     debug!("UART interrupt.");
 }

@@ -44,6 +44,18 @@ CARGOFLAGS += $(if $(RELEASE),--release,)
 build-kernel:
 > $(CARGO) build $(CARGOFLAGS) --manifest-path kernel/Cargo.toml
 
+.PHONY: fmt
+fmt:
+> $(CARGO) fmt --all -- --check
+
+.PHONY: clippy
+clippy:
+> $(CARGO) clippy $(CARGOFLAGS) --manifest-path kernel/Cargo.toml -- -D warnings
+
+.PHONY: test
+test:
+> $(CARGO) test $(CARGOFLAGS) --all -- --nocapture
+
 .PHONY: build-iso
 build-iso:
 > mkdir -p build/boot/grub

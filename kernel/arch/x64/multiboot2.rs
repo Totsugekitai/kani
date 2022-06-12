@@ -224,7 +224,7 @@ unsafe fn parse_memory_map(ptr: *const MemoryMapEntry, n: u32) -> BootInfo {
             ptr::read_unaligned(ptr::addr_of!(entry.entry_type))
         );
         if let MemoryMapType::Available = entry.entry_type {
-            boot_info.memory_map.push(entry.clone());
+            boot_info.memory_map.push(*entry);
         }
 
         entry_ptr =
