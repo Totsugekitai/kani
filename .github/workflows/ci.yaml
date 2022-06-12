@@ -23,7 +23,7 @@ jobs:
       - run: rustup component add rustfmt
       - uses: ./.github/actions/cache_cargo
       - name: fmt
-        run: cargo fmt --all -- --check
+        run: make fmt
   clippy:
     runs-on: ubuntu-latest
     env:
@@ -34,7 +34,7 @@ jobs:
       - run: rustup component add clippy
       - uses: ./.github/actions/cache_cargo
       - name: clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: make clippy
   # test:
   #   runs-on: ubuntu-latest
   #   env:
