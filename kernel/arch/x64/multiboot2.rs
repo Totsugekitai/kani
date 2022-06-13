@@ -116,6 +116,7 @@ pub enum MemoryMapType {
     Acpi = 3,
     ReservedForHibernation = 4,
     DefectiveRamModules = 5,
+    Reserved,
 }
 
 #[allow(unreachable_patterns)]
