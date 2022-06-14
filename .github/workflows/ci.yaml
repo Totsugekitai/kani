@@ -43,13 +43,3 @@ jobs:
           rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
           rustup component add clippy --toolchain nightly-x86_64-unknown-linux-gnu
           make clippy
-  # test:
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     RUSTC_FORCE_INCREMENTAL: 1
-  #   needs: build
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: ./.github/actions/cache_cargo
-  #     - name: test
-  #       run: cargo test --all -- --nocapture

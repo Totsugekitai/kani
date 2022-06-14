@@ -40,9 +40,6 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
     info!("boot ok.");
     println!("Hello, kani!");
 
-    #[cfg(test)]
-    test_main();
-
     // let mut executor = Executor::new();
     // executor.spawn(Task::new(sample_task()));
     // executor.spawn(Task::new(crate::task::uart::print_keypresses()));
@@ -56,11 +53,4 @@ pub unsafe extern "C" fn init_x86(multiboot2_magic: u32, multiboot2_info: usize)
 // async fn sample_task() {
 //     let num = sample().await;
 //     println!("num {}", num);
-// }
-
-// #[test_case]
-// fn it_works() {
-//     print!("trivial assertion... ");
-//     assert_eq!(1, 1);
-//     println!("[ok]");
 // }

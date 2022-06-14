@@ -3,16 +3,17 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(linked_list_cursors)]
-#![feature(custom_test_frameworks)]
-#![test_runner(crate::test_runner)]
-#![reexport_test_harness_main = "test_main"]
 #![allow(clippy::missing_safety_doc)]
+// #![feature(custom_test_frameworks)]
+// #![test_runner(crate::test_runner)]
+// #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
 pub mod allocator;
 pub mod arch;
 pub mod logger;
+pub mod page_frame_allocator;
 pub mod println;
 // pub mod process;
 // pub mod task;

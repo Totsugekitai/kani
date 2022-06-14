@@ -3,7 +3,7 @@ SHELL := bash
 .ONESHELL:
 MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 
-.SILENT:
+#.SILENT:
 
 export RELEASE ?=
 export QEMU ?=
@@ -13,10 +13,12 @@ export ARCH ?= x64
 
 target_json := kernel/arch/$(ARCH)/$(ARCH).json
 build_mode := $(if $(RELEASE),release,debug)
-features := 
+features :=
+qemu :=
 
 ifeq ($(QEMU),1)
 features += qemu
+qemu =-qemu
 endif
 
 ifeq ($(LOG),error)
@@ -61,12 +63,12 @@ build-iso:
 > mkdir -p build/boot/grub
 > cp boot/grub.cfg build/boot/grub
 > cp target/$(ARCH)/$(build_mode)/kani build/kani.elf
-> grub-mkrescue -o kani.iso build
+> grub-mkrescue -o kani-$(ARCH)-$(build_mode)$(qemu).iso build
 
 .PHONY: build
 build: build-kernel build-iso
 
-QEMUFLAGS += -cdrom kani.iso -serial stdio
+QEMUFLAGS += -cdrom kani-$(ARCH)-$(build_mode)$(qemu).iso -serial stdio
 
 .PHONY: run
 run:
@@ -86,4 +88,4 @@ all: build-kernel build-iso run
 .PHONY: clean
 clean:
 > cargo clean
-> rm -rf build kani.iso kani.x64.map
+> rm -rf build kani*.iso kani.x64.map
